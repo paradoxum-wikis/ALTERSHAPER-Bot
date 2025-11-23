@@ -75,7 +75,9 @@ export class ConsoleHandler {
       console.log("🔚 Console input closed.");
     });
 
-    console.log("🛠️  Console command handler ready. Type \"help\" for options.\n"); // intentional dup space
+    console.log(
+      '🛠️  Console command handler ready. Type "help" for options.\n',
+    ); // intentional dup space
     this.prompt();
   }
 

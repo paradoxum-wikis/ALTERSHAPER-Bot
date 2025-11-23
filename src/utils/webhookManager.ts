@@ -37,8 +37,14 @@ export class WebhookManager {
     try {
       const data = readFileSync(this.WEBHOOK_DATA_FILE, "utf-8");
       const parsed = JSON.parse(data);
-      this.webhookData = parsed && parsed.webhooks ? parsed : { webhooks: [], nextHeraldNumber: 1 };
-      if (this.webhookData && typeof this.webhookData.nextHeraldNumber !== 'number') {
+      this.webhookData =
+        parsed && parsed.webhooks
+          ? parsed
+          : { webhooks: [], nextHeraldNumber: 1 };
+      if (
+        this.webhookData &&
+        typeof this.webhookData.nextHeraldNumber !== "number"
+      ) {
         this.webhookData.nextHeraldNumber = 1;
       }
     } catch (error) {
@@ -116,7 +122,8 @@ export class WebhookManager {
         throw new Error("Failed to initialize webhook data");
       }
 
-      const finalName = customName || `herald_${this.webhookData.nextHeraldNumber}`;
+      const finalName =
+        customName || `herald_${this.webhookData.nextHeraldNumber}`;
 
       const existingWebhook = this.webhookData.webhooks.find(
         (w) => w.guildId === channel.guild.id && w.name === finalName,
@@ -184,10 +191,9 @@ export class WebhookManager {
       return null;
     }
 
-    const targetWebhook =
-      webhookName
-        ? guildWebhooks.find((w) => w.name === webhookName)
-        : guildWebhooks[0];
+    const targetWebhook = webhookName
+      ? guildWebhooks.find((w) => w.name === webhookName)
+      : guildWebhooks[0];
 
     if (!targetWebhook) {
       return null;
@@ -238,7 +244,8 @@ export class WebhookManager {
     }
 
     const webhookIndex = this.webhookData.webhooks.findIndex(
-      (w) => w.guildId === guild.id && (webhookName ? w.name === webhookName : true),
+      (w) =>
+        w.guildId === guild.id && (webhookName ? w.name === webhookName : true),
     );
 
     if (webhookIndex === -1) {
@@ -326,7 +333,11 @@ export class WebhookManager {
     guild: Guild,
     channelId?: string,
     webhookName?: string,
-  ): Promise<{ success: boolean; message: string; webhook?: import("discord.js").Webhook }> {
+  ): Promise<{
+    success: boolean;
+    message: string;
+    webhook?: import("discord.js").Webhook;
+  }> {
     try {
       let webhook = await this.getWebhook(guild, webhookName);
 
@@ -374,7 +385,8 @@ export class WebhookManager {
         };
       }
 
-      const displayName = webhookName || `herald_${this.webhookData?.nextHeraldNumber || 1}`;
+      const displayName =
+        webhookName || `herald_${this.webhookData?.nextHeraldNumber || 1}`;
       webhook = await this.createWebhook(
         targetChannel,
         "Altershaper's Herald",

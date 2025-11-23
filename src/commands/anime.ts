@@ -108,7 +108,9 @@ export async function execute(
     const metadataResponse = await fetchT(metadataUrl, FETCH_TIMEOUT);
 
     if (!metadataResponse.ok) {
-      throw new Error(`Metadata fetch failed with status: ${metadataResponse.status}`);
+      throw new Error(
+        `Metadata fetch failed with status: ${metadataResponse.status}`,
+      );
     }
 
     const data = (await metadataResponse.json()) as AnimeImageResponse[];
@@ -124,11 +126,14 @@ export async function execute(
     const imageResponse = await fetchT(imageUrl, FETCH_TIMEOUT);
 
     if (!imageResponse.ok) {
-      throw new Error(`Image fetch failed with status: ${imageResponse.status}`);
+      throw new Error(
+        `Image fetch failed with status: ${imageResponse.status}`,
+      );
     }
 
     const imageBuffer = Buffer.from(await imageResponse.arrayBuffer());
-    const contentType = imageResponse.headers.get("content-type") || "image/webp";
+    const contentType =
+      imageResponse.headers.get("content-type") || "image/webp";
     const extension = contentType.split("/")[1] || "webp";
     const attachment = new AttachmentBuilder(imageBuffer, {
       name: `anime_${imageData.id}.${extension}`,
@@ -216,10 +221,7 @@ export async function execute(
   }
 }
 
-async function fetchT(
-  url: string,
-  timeout: number,
-): Promise<Response> {
+async function fetchT(url: string, timeout: number): Promise<Response> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeout);
 

@@ -290,7 +290,7 @@ class AltershaperBot {
     console.log("================================");
 
     const allLocks = BattleLockManager.getAllLocks();
-    
+
     if (allLocks.size === 0) {
       console.log("No active battle locks\n");
       console.log("================================\n");
@@ -300,21 +300,21 @@ class AltershaperBot {
     allLocks.forEach((userIds, guildId) => {
       const guild = this.client.guilds.cache.get(guildId);
       const guildName = guild ? guild.name : `Unknown (${guildId})`;
-      
+
       console.log(`📁 ${guildName}`);
       console.log(`   • Guild ID: ${guildId}`);
       console.log(`   • Locked Users: ${userIds.size}`);
-      
+
       const userTags: string[] = [];
       userIds.forEach((userId) => {
         const user = this.client.users.cache.get(userId);
         userTags.push(user ? user.tag : userId);
       });
-      
+
       if (userTags.length > 0) {
         console.log(`   • Users: ${userTags.join(", ")}`);
       }
-      
+
       console.log("");
     });
 

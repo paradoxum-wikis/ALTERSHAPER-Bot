@@ -71,11 +71,11 @@ export class FamilyTreeRenderer {
     },
   ): Promise<Buffer> {
     const tree = this.buildTreeStructure(rootUser, relationships);
-    
+
     // Calculate required canvas size based on tree content
     const bounds = this.calculateTreeBounds(tree);
     const { width, height } = this.calculateCanvasSize(bounds);
-    
+
     const canvas = createCanvas(width, height);
     const ctx = canvas.getContext("2d");
 
@@ -92,7 +92,7 @@ export class FamilyTreeRenderer {
     maxY: number;
   } {
     this.calculatePositions(node);
-    
+
     let minX = node.x - this.NODE_WIDTH / 2;
     let maxX = node.x + this.NODE_WIDTH / 2;
     let minY = node.y;
@@ -123,8 +123,12 @@ export class FamilyTreeRenderer {
 
     if (node.spouses && node.spouses.length > 0) {
       const spouseCount = node.spouses.length;
-      const spouseWidth = (this.NODE_WIDTH + this.HORIZONTAL_SPACING) * spouseCount;
-      maxX = Math.max(maxX, node.x + this.NODE_WIDTH / 2 + this.HORIZONTAL_SPACING + spouseWidth);
+      const spouseWidth =
+        (this.NODE_WIDTH + this.HORIZONTAL_SPACING) * spouseCount;
+      maxX = Math.max(
+        maxX,
+        node.x + this.NODE_WIDTH / 2 + this.HORIZONTAL_SPACING + spouseWidth,
+      );
     }
 
     return { minX, maxX, minY, maxY };
@@ -157,18 +161,22 @@ export class FamilyTreeRenderer {
     };
   }
 
-  private static drawModernBackground(ctx: CanvasRenderingContext2D, width: number, height: number): void {
+  private static drawModernBackground(
+    ctx: CanvasRenderingContext2D,
+    width: number,
+    height: number,
+  ): void {
     const gradient = ctx.createLinearGradient(0, 0, width, height);
     gradient.addColorStop(0, this.BACKGROUND_GRADIENT.start);
     gradient.addColorStop(0.5, this.BACKGROUND_GRADIENT.middle);
     gradient.addColorStop(1, this.BACKGROUND_GRADIENT.end);
-    
+
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, width, height);
 
     ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
     ctx.lineWidth = 1;
-    
+
     const gridSize = 50;
     for (let x = 0; x < width; x += gridSize) {
       ctx.beginPath();
@@ -176,7 +184,7 @@ export class FamilyTreeRenderer {
       ctx.lineTo(x, height);
       ctx.stroke();
     }
-    
+
     for (let y = 0; y < height; y += gridSize) {
       ctx.beginPath();
       ctx.moveTo(0, y);
@@ -188,7 +196,7 @@ export class FamilyTreeRenderer {
     ctx.beginPath();
     ctx.arc(100, 100, 200, 0, Math.PI * 2);
     ctx.fill();
-    
+
     ctx.beginPath();
     ctx.arc(width - 150, height - 150, 250, 0, Math.PI * 2);
     ctx.fill();
@@ -259,7 +267,12 @@ export class FamilyTreeRenderer {
   ): Promise<void> {
     this.calculatePositions(tree);
     const uniqueNodes = this.collectUniqueNodes(tree);
-    const connections = this.collectConnections(tree, uniqueNodes, relationships, []);
+    const connections = this.collectConnections(
+      tree,
+      uniqueNodes,
+      relationships,
+      [],
+    );
 
     this.drawConnections(ctx, connections);
     await this.drawUniqueNodes(ctx, uniqueNodes);
@@ -312,26 +325,31 @@ export class FamilyTreeRenderer {
         occupiedPositions.add(nodeData.x);
       }
     });
-    
+
     let spouseIndex = 0;
     node.spouses?.forEach((spouse) => {
       if (!uniqueNodes.has(spouse.id)) {
         let spouseX: number;
         let attempts = 0;
         const maxAttempts = 20;
-        
+
         do {
-          spouseX = node.x + this.NODE_WIDTH / 2 + this.HORIZONTAL_SPACING + (this.NODE_WIDTH + this.HORIZONTAL_SPACING) * (spouseIndex + attempts);
+          spouseX =
+            node.x +
+            this.NODE_WIDTH / 2 +
+            this.HORIZONTAL_SPACING +
+            (this.NODE_WIDTH + this.HORIZONTAL_SPACING) *
+              (spouseIndex + attempts);
           attempts++;
         } while (occupiedPositions.has(spouseX) && attempts < maxAttempts);
-        
+
         uniqueNodes.set(spouse.id, {
           user: spouse,
           x: spouseX,
           y: node.y,
           isRoot: false,
         });
-        
+
         occupiedPositions.add(spouseX);
         spouseIndex++;
       }
@@ -343,19 +361,21 @@ export class FamilyTreeRenderer {
   private static calculatePositions(node: TreeNode): void {
     const hasParents = node.parents.length > 0;
     const hasChildren = node.children.length > 0;
-    
+
     let levels = 1;
     if (hasParents) levels++;
     if (hasChildren) levels++;
 
     const totalHeight = levels * (this.NODE_HEIGHT + this.VERTICAL_SPACING);
 
-    const rootLevelNodes = 1 + node.siblings.length + (node.spouses?.length || 0);
-    const minWidth = rootLevelNodes * (this.NODE_WIDTH + this.HORIZONTAL_SPACING);
-    
+    const rootLevelNodes =
+      1 + node.siblings.length + (node.spouses?.length || 0);
+    const minWidth =
+      rootLevelNodes * (this.NODE_WIDTH + this.HORIZONTAL_SPACING);
+
     const canvasWidth = Math.max(this.MIN_CANVAS_WIDTH, minWidth);
     const canvasHeight = Math.max(this.MIN_CANVAS_HEIGHT, totalHeight);
-    
+
     const startY = (canvasHeight - totalHeight) / 2 + this.VERTICAL_SPACING;
     const centerX = canvasWidth / 2;
 
@@ -369,7 +389,8 @@ export class FamilyTreeRenderer {
 
     if (node.parents.length > 0) {
       const parentSpacing = this.NODE_WIDTH + this.HORIZONTAL_SPACING;
-      const parentStartX = centerX - ((node.parents.length - 1) * parentSpacing) / 2;
+      const parentStartX =
+        centerX - ((node.parents.length - 1) * parentSpacing) / 2;
       node.parents.forEach((parent, index) => {
         parent.x = parentStartX + index * parentSpacing;
         parent.y = startY;
@@ -389,7 +410,8 @@ export class FamilyTreeRenderer {
 
     if (node.children.length > 0) {
       const childSpacing = this.NODE_WIDTH + this.HORIZONTAL_SPACING;
-      const childStartX = centerX - ((node.children.length - 1) * childSpacing) / 2;
+      const childStartX =
+        centerX - ((node.children.length - 1) * childSpacing) / 2;
       node.children.forEach((child, index) => {
         child.x = childStartX + index * childSpacing;
         child.y = rootY + this.NODE_HEIGHT + this.VERTICAL_SPACING;
@@ -449,7 +471,7 @@ export class FamilyTreeRenderer {
         const childCenterX = childNode.x + this.NODE_WIDTH / 2;
         const childTop = childNode.y;
         const childCenterY = childNode.y + this.NODE_HEIGHT / 2;
-        
+
         if (Math.abs(childNode.y - rootNode.y) < 10) {
           connections.push({
             from: { x: rootRight, y: rootCenterY },
@@ -489,7 +511,7 @@ export class FamilyTreeRenderer {
     connections: RelationshipConnection[],
   ): void {
     const connectionsByTarget = new Map<string, RelationshipConnection[]>();
-    
+
     connections.forEach((conn) => {
       const targetId = conn.targetUser.id;
       const group = connectionsByTarget.get(targetId) || [];
@@ -511,14 +533,19 @@ export class FamilyTreeRenderer {
     conn: RelationshipConnection,
   ): void {
     const colors = this.RELATIONSHIP_COLORS[conn.type];
-    const gradient = ctx.createLinearGradient(conn.from.x, conn.from.y, conn.to.x, conn.to.y);
+    const gradient = ctx.createLinearGradient(
+      conn.from.x,
+      conn.from.y,
+      conn.to.x,
+      conn.to.y,
+    );
     gradient.addColorStop(0, colors.start);
     gradient.addColorStop(1, colors.end);
-    
+
     ctx.strokeStyle = gradient;
     ctx.lineWidth = 4;
     ctx.lineCap = "round";
-    
+
     if (conn.type === "sibling") {
       ctx.setLineDash([10, 8]);
     } else {
@@ -527,12 +554,12 @@ export class FamilyTreeRenderer {
 
     ctx.shadowColor = colors.start;
     ctx.shadowBlur = 15;
-    
+
     ctx.beginPath();
     ctx.moveTo(conn.from.x, conn.from.y);
     ctx.lineTo(conn.to.x, conn.to.y);
     ctx.stroke();
-    
+
     ctx.shadowBlur = 0;
   }
 
@@ -541,11 +568,11 @@ export class FamilyTreeRenderer {
     connections: RelationshipConnection[],
   ): void {
     const offset = 10;
-    
+
     connections.forEach((conn, index) => {
       const lineOffset = (index - (connections.length - 1) / 2) * offset;
       const colors = this.RELATIONSHIP_COLORS[conn.type];
-      
+
       const dx = conn.to.x - conn.from.x;
       const dy = conn.to.y - conn.from.y;
       const length = Math.sqrt(dx * dx + dy * dy);
@@ -560,11 +587,11 @@ export class FamilyTreeRenderer {
       const gradient = ctx.createLinearGradient(fromX, fromY, toX, toY);
       gradient.addColorStop(0, colors.start);
       gradient.addColorStop(1, colors.end);
-      
+
       ctx.strokeStyle = gradient;
       ctx.lineWidth = 4;
       ctx.lineCap = "round";
-      
+
       if (conn.type === "sibling") {
         ctx.setLineDash([10, 8]);
       } else {
@@ -578,7 +605,7 @@ export class FamilyTreeRenderer {
       ctx.moveTo(fromX, fromY);
       ctx.lineTo(toX, toY);
       ctx.stroke();
-      
+
       ctx.shadowBlur = 0;
     });
   }
@@ -610,7 +637,12 @@ export class FamilyTreeRenderer {
     ctx.shadowOffsetY = 10;
 
     if (isRoot) {
-      const gradient = ctx.createLinearGradient(x, y, x + this.NODE_WIDTH, y + this.NODE_HEIGHT);
+      const gradient = ctx.createLinearGradient(
+        x,
+        y,
+        x + this.NODE_WIDTH,
+        y + this.NODE_HEIGHT,
+      );
       gradient.addColorStop(0, "rgba(255, 255, 255, 0.15)");
       gradient.addColorStop(1, "rgba(124, 124, 124, 0.25)");
       ctx.fillStyle = gradient;
@@ -657,7 +689,13 @@ export class FamilyTreeRenderer {
       ctx.closePath();
       ctx.clip();
 
-      ctx.drawImage(avatar, avatarX, avatarY, this.AVATAR_SIZE, this.AVATAR_SIZE);
+      ctx.drawImage(
+        avatar,
+        avatarX,
+        avatarY,
+        this.AVATAR_SIZE,
+        this.AVATAR_SIZE,
+      );
       ctx.restore();
 
       if (isRoot) {
@@ -667,7 +705,7 @@ export class FamilyTreeRenderer {
         ctx.strokeStyle = "rgba(255, 255, 255, 0.3)";
         ctx.lineWidth = 2;
       }
-      
+
       ctx.beginPath();
       ctx.arc(
         avatarX + this.AVATAR_SIZE / 2,
@@ -677,7 +715,7 @@ export class FamilyTreeRenderer {
         Math.PI * 2,
       );
       ctx.stroke();
-      
+
       ctx.shadowBlur = 0;
     } catch (error) {
       console.error("Failed to load avatar:", error);
@@ -701,29 +739,36 @@ export class FamilyTreeRenderer {
     const textX = x + this.AVATAR_SIZE + 30;
     const maxTextWidth = this.NODE_WIDTH - this.AVATAR_SIZE - 50;
     let username = user.username;
-    
-    while (ctx.measureText(username).width > maxTextWidth && username.length > 0) {
+
+    while (
+      ctx.measureText(username).width > maxTextWidth &&
+      username.length > 0
+    ) {
       username = username.slice(0, -1);
     }
     if (username.length < user.username.length) {
       username = username + "...";
     }
-    
+
     ctx.shadowColor = "rgba(0, 0, 0, 0.8)";
     ctx.shadowBlur = 6;
-    
+
     const hasDiscriminator = user.discriminator !== "0";
-    const usernameY = hasDiscriminator 
+    const usernameY = hasDiscriminator
       ? y + this.NODE_HEIGHT / 2 - 12
       : y + this.NODE_HEIGHT / 2;
-    
+
     ctx.fillText(username, textX, usernameY);
     ctx.shadowBlur = 0;
 
     if (hasDiscriminator) {
       ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
       ctx.font = `20px Verdana`;
-      ctx.fillText(`#${user.discriminator}`, textX, y + this.NODE_HEIGHT / 2 + 16);
+      ctx.fillText(
+        `#${user.discriminator}`,
+        textX,
+        y + this.NODE_HEIGHT / 2 + 16,
+      );
     }
   }
 

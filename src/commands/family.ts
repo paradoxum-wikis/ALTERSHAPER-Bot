@@ -112,8 +112,11 @@ export async function execute(
   try {
     switch (subcommand) {
       case "tree": {
-        const targetUser = interaction.options.getUser("user") || interaction.user;
-        const relationships = await FamilyManager.getUserRelationships(targetUser.id);
+        const targetUser =
+          interaction.options.getUser("user") || interaction.user;
+        const relationships = await FamilyManager.getUserRelationships(
+          targetUser.id,
+        );
 
         if (relationships.length === 0) {
           await interaction.reply({
@@ -127,23 +130,39 @@ export async function execute(
 
         const spouseIds = await FamilyManager.getSpouses(targetUser.id);
         const spouses = await Promise.all(
-          spouseIds.map((id) => interaction.client.users.fetch(id).catch(() => null)),
-        ).then(users => users.filter((u): u is NonNullable<typeof u> => u !== null));
+          spouseIds.map((id) =>
+            interaction.client.users.fetch(id).catch(() => null),
+          ),
+        ).then((users) =>
+          users.filter((u): u is NonNullable<typeof u> => u !== null),
+        );
 
         const childrenIds = await FamilyManager.getChildren(targetUser.id);
         const children = await Promise.all(
-          childrenIds.map((id) => interaction.client.users.fetch(id).catch(() => null)),
-        ).then(users => users.filter((u): u is NonNullable<typeof u> => u !== null));
+          childrenIds.map((id) =>
+            interaction.client.users.fetch(id).catch(() => null),
+          ),
+        ).then((users) =>
+          users.filter((u): u is NonNullable<typeof u> => u !== null),
+        );
 
         const parentIds = await FamilyManager.getParents(targetUser.id);
         const parents = await Promise.all(
-          parentIds.map((id) => interaction.client.users.fetch(id).catch(() => null)),
-        ).then(users => users.filter((u): u is NonNullable<typeof u> => u !== null));
+          parentIds.map((id) =>
+            interaction.client.users.fetch(id).catch(() => null),
+          ),
+        ).then((users) =>
+          users.filter((u): u is NonNullable<typeof u> => u !== null),
+        );
 
         const siblingIds = await FamilyManager.getSiblings(targetUser.id);
         const siblings = await Promise.all(
-          siblingIds.map((id) => interaction.client.users.fetch(id).catch(() => null)),
-        ).then(users => users.filter((u): u is NonNullable<typeof u> => u !== null));
+          siblingIds.map((id) =>
+            interaction.client.users.fetch(id).catch(() => null),
+          ),
+        ).then((users) =>
+          users.filter((u): u is NonNullable<typeof u> => u !== null),
+        );
 
         const treeBuffer = await FamilyTreeRenderer.generateTree(targetUser, {
           spouses,
@@ -171,8 +190,11 @@ export async function execute(
       }
 
       case "profile": {
-        const targetUser = interaction.options.getUser("user") || interaction.user;
-        const relationships = await FamilyManager.getUserRelationships(targetUser.id);
+        const targetUser =
+          interaction.options.getUser("user") || interaction.user;
+        const relationships = await FamilyManager.getUserRelationships(
+          targetUser.id,
+        );
 
         if (relationships.length === 0) {
           await interaction.reply({
@@ -269,50 +291,63 @@ export async function execute(
           interaction.user.id,
           targetUser.id,
         );
-        const existingSpouses = await FamilyManager.getSpouses(interaction.user.id);
+        const existingSpouses = await FamilyManager.getSpouses(
+          interaction.user.id,
+        );
         const targetSpouses = await FamilyManager.getSpouses(targetUser.id);
 
-        if (hasExistingRelationship || existingSpouses.length > 0 || targetSpouses.length > 0) {
+        if (
+          hasExistingRelationship ||
+          existingSpouses.length > 0 ||
+          targetSpouses.length > 0
+        ) {
           const warnings: string[] = [];
 
           if (existingSpouses.length > 0) {
             const spouseUsers = await Promise.all(
-              existingSpouses.map(id => interaction.client.users.fetch(id))
+              existingSpouses.map((id) => interaction.client.users.fetch(id)),
             );
-            const spouseNames = spouseUsers.map(u => u.tag).join(", ");
+            const spouseNames = spouseUsers.map((u) => u.tag).join(", ");
             warnings.push(`⚠️ **You are already married to ${spouseNames}!**`);
           }
 
           if (targetSpouses.length > 0) {
             const targetSpouseUsers = await Promise.all(
-              targetSpouses.map(id => interaction.client.users.fetch(id))
+              targetSpouses.map((id) => interaction.client.users.fetch(id)),
             );
-            const targetSpouseNames = targetSpouseUsers.map(u => u.tag).join(", ");
-            warnings.push(`⚠️ **${targetUser.tag} is already married to ${targetSpouseNames}!**`);
-          }
-          
-          if (hasExistingRelationship) {
-            warnings.push(`⚠️ **You already have a family relationship with ${targetUser.tag}!**`);
+            const targetSpouseNames = targetSpouseUsers
+              .map((u) => u.tag)
+              .join(", ");
+            warnings.push(
+              `⚠️ **${targetUser.tag} is already married to ${targetSpouseNames}!**`,
+            );
           }
 
-          const confirmRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
-            new ButtonBuilder()
-              .setCustomId("proceed_marry")
-              .setLabel("Proceed Anyway")
-              .setStyle(ButtonStyle.Danger),
-            new ButtonBuilder()
-              .setCustomId("cancel_marry")
-              .setLabel("Cancel")
-              .setStyle(ButtonStyle.Secondary),
-          );
+          if (hasExistingRelationship) {
+            warnings.push(
+              `⚠️ **You already have a family relationship with ${targetUser.tag}!**`,
+            );
+          }
+
+          const confirmRow =
+            new ActionRowBuilder<ButtonBuilder>().addComponents(
+              new ButtonBuilder()
+                .setCustomId("proceed_marry")
+                .setLabel("Proceed Anyway")
+                .setStyle(ButtonStyle.Danger),
+              new ButtonBuilder()
+                .setCustomId("cancel_marry")
+                .setLabel("Cancel")
+                .setStyle(ButtonStyle.Secondary),
+            );
 
           const warningEmbed = new EmbedBuilder()
             .setColor("#FFA500")
             .setTitle("⚠️ MARRIAGE WARNING")
             .setDescription(
               warnings.join("\n\n") +
-              "\n\n**This will create a potentially chaotic family tree!**\n\n" +
-              "Are you sure you want to proceed?",
+                "\n\n**This will create a potentially chaotic family tree!**\n\n" +
+                "Are you sure you want to proceed?",
             )
             .setTimestamp();
 
@@ -321,10 +356,11 @@ export async function execute(
             components: [confirmRow],
           });
 
-          const warningCollector = warningResponse.createMessageComponentCollector({
-            componentType: ComponentType.Button,
-            time: 30000,
-          });
+          const warningCollector =
+            warningResponse.createMessageComponentCollector({
+              componentType: ComponentType.Button,
+              time: 30000,
+            });
 
           warningCollector.on("collect", async (i) => {
             if (i.user.id !== interaction.user.id) {
@@ -368,7 +404,7 @@ export async function execute(
               .setTitle("💍 MARRIAGE PROPOSAL")
               .setDescription(
                 `**${interaction.user.tag}** has proposed marriage to **${targetUser.tag}**!\n\n` +
-                `${targetUser.tag}, do you accept this sacred union?`,
+                  `${targetUser.tag}, do you accept this sacred union?`,
               )
               .setTimestamp();
 
@@ -405,11 +441,14 @@ export async function execute(
                   .setTitle("💍 MARRIAGE CEREMONY COMPLETE")
                   .setDescription(
                     `**${interaction.user.tag}** and **${targetUser.tag}** are now married!\n\n` +
-                    `May your union be blessed with eternal happiness! 💕`,
+                      `May your union be blessed with eternal happiness! 💕`,
                   )
                   .setTimestamp();
 
-                await buttonInteraction.update({ embeds: [successEmbed], components: [] });
+                await buttonInteraction.update({
+                  embeds: [successEmbed],
+                  components: [],
+                });
               } else {
                 const declineEmbed = new EmbedBuilder()
                   .setColor("#FF0000")
@@ -419,7 +458,10 @@ export async function execute(
                   )
                   .setTimestamp();
 
-                await buttonInteraction.update({ embeds: [declineEmbed], components: [] });
+                await buttonInteraction.update({
+                  embeds: [declineEmbed],
+                  components: [],
+                });
               }
 
               collector.stop();
@@ -446,7 +488,10 @@ export async function execute(
                 .setDescription("Marriage warning timed out.")
                 .setTimestamp();
 
-              await warningResponse.edit({ embeds: [timeoutEmbed], components: [] });
+              await warningResponse.edit({
+                embeds: [timeoutEmbed],
+                components: [],
+              });
             }
           });
 
@@ -469,7 +514,7 @@ export async function execute(
           .setTitle("💍 MARRIAGE PROPOSAL")
           .setDescription(
             `**${interaction.user.tag}** has proposed marriage to **${targetUser.tag}**!\n\n` +
-            `${targetUser.tag}, do you accept this sacred union?`,
+              `${targetUser.tag}, do you accept this sacred union?`,
           )
           .setTimestamp();
 
@@ -506,7 +551,7 @@ export async function execute(
               .setTitle("💍 MARRIAGE CEREMONY COMPLETE")
               .setDescription(
                 `**${interaction.user.tag}** and **${targetUser.tag}** are now married!\n\n` +
-                `May your union be blessed with eternal happiness! 💕`,
+                  `May your union be blessed with eternal happiness! 💕`,
               )
               .setTimestamp();
 
@@ -568,7 +613,7 @@ export async function execute(
           .setTitle("⚠️ DIVORCE CONFIRMATION")
           .setDescription(
             `**${interaction.user.tag}**, are you sure you want to divorce **${targetUser.tag}**?\n\n` +
-            `This action will end your marriage.`,
+              `This action will end your marriage.`,
           )
           .setTimestamp();
 
@@ -649,24 +694,25 @@ export async function execute(
         );
 
         if (hasExistingRelationship) {
-          const confirmRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
-            new ButtonBuilder()
-              .setCustomId("proceed_adopt")
-              .setLabel("Proceed Anyway")
-              .setStyle(ButtonStyle.Danger),
-            new ButtonBuilder()
-              .setCustomId("cancel_adopt")
-              .setLabel("Cancel")
-              .setStyle(ButtonStyle.Secondary),
-          );
+          const confirmRow =
+            new ActionRowBuilder<ButtonBuilder>().addComponents(
+              new ButtonBuilder()
+                .setCustomId("proceed_adopt")
+                .setLabel("Proceed Anyway")
+                .setStyle(ButtonStyle.Danger),
+              new ButtonBuilder()
+                .setCustomId("cancel_adopt")
+                .setLabel("Cancel")
+                .setStyle(ButtonStyle.Secondary),
+            );
 
           const warningEmbed = new EmbedBuilder()
             .setColor("#FFA500")
             .setTitle("⚠️ ADOPTION WARNING")
             .setDescription(
               `⚠️ **You already have a family relationship with ${targetUser.tag}!**\n\n` +
-              "**This will create a potentially chaotic family tree!**\n\n" +
-              "Are you sure you want to proceed?",
+                "**This will create a potentially chaotic family tree!**\n\n" +
+                "Are you sure you want to proceed?",
             )
             .setTimestamp();
 
@@ -675,10 +721,11 @@ export async function execute(
             components: [confirmRow],
           });
 
-          const warningCollector = warningResponse.createMessageComponentCollector({
-            componentType: ComponentType.Button,
-            time: 30000,
-          });
+          const warningCollector =
+            warningResponse.createMessageComponentCollector({
+              componentType: ComponentType.Button,
+              time: 30000,
+            });
 
           warningCollector.on("collect", async (i) => {
             if (i.user.id !== interaction.user.id) {
@@ -722,7 +769,7 @@ export async function execute(
               .setTitle("👶 ADOPTION REQUEST")
               .setDescription(
                 `**${interaction.user.tag}** wants to adopt **${targetUser.tag}**!\n\n` +
-                `${targetUser.tag}, do you accept?`,
+                  `${targetUser.tag}, do you accept?`,
               )
               .setTimestamp();
 
@@ -759,11 +806,14 @@ export async function execute(
                   .setTitle("👶 ADOPTION COMPLETE")
                   .setDescription(
                     `**${interaction.user.tag}** has successfully adopted **${targetUser.tag}**!\n\n` +
-                    `Welcome to the family! 👨‍👩‍👧‍👦`,
+                      `Welcome to the family! 👨‍👩‍👧‍👦`,
                   )
                   .setTimestamp();
 
-                await buttonInteraction.update({ embeds: [successEmbed], components: [] });
+                await buttonInteraction.update({
+                  embeds: [successEmbed],
+                  components: [],
+                });
               } else {
                 const declineEmbed = new EmbedBuilder()
                   .setColor("#FF0000")
@@ -773,7 +823,10 @@ export async function execute(
                   )
                   .setTimestamp();
 
-                await buttonInteraction.update({ embeds: [declineEmbed], components: [] });
+                await buttonInteraction.update({
+                  embeds: [declineEmbed],
+                  components: [],
+                });
               }
 
               collector.stop();
@@ -800,7 +853,10 @@ export async function execute(
                 .setDescription("Adoption warning timed out.")
                 .setTimestamp();
 
-              await warningResponse.edit({ embeds: [timeoutEmbed], components: [] });
+              await warningResponse.edit({
+                embeds: [timeoutEmbed],
+                components: [],
+              });
             }
           });
 
@@ -823,7 +879,7 @@ export async function execute(
           .setTitle("👶 ADOPTION REQUEST")
           .setDescription(
             `**${interaction.user.tag}** wants to adopt **${targetUser.tag}**!\n\n` +
-            `${targetUser.tag}, do you accept?`,
+              `${targetUser.tag}, do you accept?`,
           )
           .setTimestamp();
 
@@ -860,7 +916,7 @@ export async function execute(
               .setTitle("👶 ADOPTION COMPLETE")
               .setDescription(
                 `**${interaction.user.tag}** has successfully adopted **${targetUser.tag}**!\n\n` +
-                `Welcome to the family! 👨‍👩‍👧‍👦`,
+                  `Welcome to the family! 👨‍👩‍👧‍👦`,
               )
               .setTimestamp();
 
@@ -1016,24 +1072,25 @@ export async function execute(
         );
 
         if (hasExistingRelationship) {
-          const confirmRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
-            new ButtonBuilder()
-              .setCustomId("proceed_sibling")
-              .setLabel("Proceed Anyway")
-              .setStyle(ButtonStyle.Danger),
-            new ButtonBuilder()
-              .setCustomId("cancel_sibling")
-              .setLabel("Cancel")
-              .setStyle(ButtonStyle.Secondary),
-          );
+          const confirmRow =
+            new ActionRowBuilder<ButtonBuilder>().addComponents(
+              new ButtonBuilder()
+                .setCustomId("proceed_sibling")
+                .setLabel("Proceed Anyway")
+                .setStyle(ButtonStyle.Danger),
+              new ButtonBuilder()
+                .setCustomId("cancel_sibling")
+                .setLabel("Cancel")
+                .setStyle(ButtonStyle.Secondary),
+            );
 
           const warningEmbed = new EmbedBuilder()
             .setColor("#FFA500")
             .setTitle("⚠️ SIBLING WARNING")
             .setDescription(
               `⚠️ **You already have a family relationship with ${targetUser.tag}!**\n\n` +
-              "**This will create a potentially chaotic family tree!**\n\n" +
-              "Are you sure you want to proceed?",
+                "**This will create a potentially chaotic family tree!**\n\n" +
+                "Are you sure you want to proceed?",
             )
             .setTimestamp();
 
@@ -1042,10 +1099,11 @@ export async function execute(
             components: [confirmRow],
           });
 
-          const warningCollector = warningResponse.createMessageComponentCollector({
-            componentType: ComponentType.Button,
-            time: 30000,
-          });
+          const warningCollector =
+            warningResponse.createMessageComponentCollector({
+              componentType: ComponentType.Button,
+              time: 30000,
+            });
 
           warningCollector.on("collect", async (i) => {
             if (i.user.id !== interaction.user.id) {
@@ -1089,7 +1147,7 @@ export async function execute(
               .setTitle("👫 SIBLING REQUEST")
               .setDescription(
                 `**${interaction.user.tag}** wants to be siblings with **${targetUser.tag}**!\n\n` +
-                `${targetUser.tag}, do you accept?`,
+                  `${targetUser.tag}, do you accept?`,
               )
               .setTimestamp();
 
@@ -1129,7 +1187,10 @@ export async function execute(
                   )
                   .setTimestamp();
 
-                await buttonInteraction.update({ embeds: [successEmbed], components: [] });
+                await buttonInteraction.update({
+                  embeds: [successEmbed],
+                  components: [],
+                });
               } else {
                 const declineEmbed = new EmbedBuilder()
                   .setColor("#FF0000")
@@ -1139,7 +1200,10 @@ export async function execute(
                   )
                   .setTimestamp();
 
-                await buttonInteraction.update({ embeds: [declineEmbed], components: [] });
+                await buttonInteraction.update({
+                  embeds: [declineEmbed],
+                  components: [],
+                });
               }
 
               collector.stop();
@@ -1166,7 +1230,10 @@ export async function execute(
                 .setDescription("Sibling warning timed out.")
                 .setTimestamp();
 
-              await warningResponse.edit({ embeds: [timeoutEmbed], components: [] });
+              await warningResponse.edit({
+                embeds: [timeoutEmbed],
+                components: [],
+              });
             }
           });
 
@@ -1189,7 +1256,7 @@ export async function execute(
           .setTitle("👫 SIBLING REQUEST")
           .setDescription(
             `**${interaction.user.tag}** wants to be siblings with **${targetUser.tag}**!\n\n` +
-            `${targetUser.tag}, do you accept?`,
+              `${targetUser.tag}, do you accept?`,
           )
           .setTimestamp();
 

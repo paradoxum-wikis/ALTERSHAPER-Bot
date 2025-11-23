@@ -106,7 +106,8 @@ export class FamilyManager {
     const data = await this.loadData();
     return data.relationships
       .filter(
-        (rel) => rel.relationshipType === "parent" && rel.relatedUserId === userId,
+        (rel) =>
+          rel.relationshipType === "parent" && rel.relatedUserId === userId,
       )
       .map((rel) => rel.userId);
   }

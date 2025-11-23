@@ -24,7 +24,9 @@ export const data = new SlashCommandBuilder()
       .addStringOption((option) =>
         option
           .setName("mode")
-          .setDescription("View normal, ranked, or all stats (defaults to normal)")
+          .setDescription(
+            "View normal, ranked, or all stats (defaults to normal)",
+          )
           .addChoices(
             { name: "Normal", value: "normal" },
             { name: "Ranked", value: "ranked" },
@@ -40,7 +42,9 @@ export const data = new SlashCommandBuilder()
       .addStringOption((option) =>
         option
           .setName("mode")
-          .setDescription("View normal or ranked leaderboard (defaults to normal)")
+          .setDescription(
+            "View normal or ranked leaderboard (defaults to normal)",
+          )
           .addChoices(
             { name: "Normal", value: "normal" },
             { name: "Ranked", value: "ranked" },
@@ -63,7 +67,9 @@ export const data = new SlashCommandBuilder()
       .addStringOption((option) =>
         option
           .setName("mode")
-          .setDescription("View normal, ranked, or all battles (defaults to all)")
+          .setDescription(
+            "View normal, ranked, or all battles (defaults to all)",
+          )
           .addChoices(
             { name: "Normal", value: "normal" },
             { name: "Ranked", value: "ranked" },

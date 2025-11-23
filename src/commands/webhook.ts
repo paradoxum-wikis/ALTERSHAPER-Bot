@@ -18,14 +18,14 @@ export const data = new SlashCommandBuilder()
         option
           .setName("channel")
           .setDescription("Channel to create webhook in")
-          .setRequired(true)
+          .setRequired(true),
       )
       .addStringOption((option) =>
         option
           .setName("name")
           .setDescription("Custom name for the webhook")
-          .setRequired(false)
-      )
+          .setRequired(false),
+      ),
   )
   .addSubcommand((subcommand) =>
     subcommand
@@ -35,8 +35,8 @@ export const data = new SlashCommandBuilder()
         option
           .setName("name")
           .setDescription("Name of the webhook to delete")
-          .setRequired(false)
-      )
+          .setRequired(false),
+      ),
   )
   .addSubcommand((subcommand) =>
     subcommand
@@ -46,19 +46,19 @@ export const data = new SlashCommandBuilder()
         option
           .setName("message")
           .setDescription("Test message to send")
-          .setRequired(false)
+          .setRequired(false),
       )
       .addStringOption((option) =>
         option
           .setName("webhook")
           .setDescription("Name of the webhook to use")
-          .setRequired(false)
-      )
+          .setRequired(false),
+      ),
   )
   .addSubcommand((subcommand) =>
     subcommand
       .setName("list")
-      .setDescription("List all of ALTERSHAPER's webhooks in this server")
+      .setDescription("List all of ALTERSHAPER's webhooks in this server"),
   )
   .addSubcommand((subcommand) =>
     subcommand
@@ -68,8 +68,8 @@ export const data = new SlashCommandBuilder()
         option
           .setName("name")
           .setDescription("Name of the webhook to check")
-          .setRequired(false)
-      )
+          .setRequired(false),
+      ),
   );
 
 export async function execute(
@@ -131,7 +131,7 @@ export async function execute(
 
         const deleted = await WebhookManager.deleteWebhook(
           interaction.guild,
-          webhookName
+          webhookName,
         );
 
         const embed = new EmbedBuilder()
@@ -139,7 +139,7 @@ export async function execute(
           .setDescription(
             deleted
               ? `**The webhook${webhookName ? ` "${webhookName}"` : ""} hath been banished from the realm!**`
-              : `**No webhook${webhookName ? ` named "${webhookName}"` : ""} found to banish!**`
+              : `**No webhook${webhookName ? ` named "${webhookName}"` : ""} found to banish!**`,
           )
           .setColor(deleted ? "#00FF00" : "#FFA500")
           .setTimestamp();
@@ -152,7 +152,8 @@ export async function execute(
         const testMessage =
           interaction.options.getString("message") ??
           "**Behold! This is a test message from the Altershaper's herald!**";
-        const webhookName = interaction.options.getString("webhook") ?? undefined;
+        const webhookName =
+          interaction.options.getString("webhook") ?? undefined;
 
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
@@ -161,8 +162,8 @@ export async function execute(
           testMessage,
           {
             username: "Altershaper's Herald",
-            webhookName: webhookName
-          }
+            webhookName: webhookName,
+          },
         );
 
         const embed = new EmbedBuilder()
@@ -170,7 +171,7 @@ export async function execute(
           .setDescription(
             sent
               ? `**Test message sent successfully${webhookName ? ` via "${webhookName}"` : ""}!**`
-              : `**Failed to send test message! Check webhook${webhookName ? ` "${webhookName}"` : ""} status.**`
+              : `**Failed to send test message! Check webhook${webhookName ? ` "${webhookName}"` : ""} status.**`,
           )
           .setColor(sent ? "#00FF00" : "#FF0000")
           .setTimestamp();
@@ -198,7 +199,7 @@ export async function execute(
             .join("\n");
 
           embed.setDescription(
-            `**Found ${webhooks.length} webhook(s):**\n\n${webhookList}`
+            `**Found ${webhooks.length} webhook(s):**\n\n${webhookList}`,
           );
         }
 
@@ -213,7 +214,7 @@ export async function execute(
         const webhookName = interaction.options.getString("name") ?? undefined;
         const webhook = await WebhookManager.getWebhook(
           interaction.guild,
-          webhookName
+          webhookName,
         );
 
         const embed = new EmbedBuilder()
@@ -223,15 +224,15 @@ export async function execute(
 
         if (webhook) {
           const channel = interaction.guild.channels.cache.get(
-            webhook.channelId
+            webhook.channelId,
           );
-          const webhookEntry = WebhookManager.getGuildWebhooks(interaction.guild).find(
-            (w) => w.id === webhook.id
-          );
+          const webhookEntry = WebhookManager.getGuildWebhooks(
+            interaction.guild,
+          ).find((w) => w.id === webhook.id);
 
           embed
             .setDescription(
-              `**Webhook "${webhookEntry?.name || "Unknown"}" Status: ACTIVE**`
+              `**Webhook "${webhookEntry?.name || "Unknown"}" Status: ACTIVE**`,
             )
             .addFields(
               {
@@ -255,11 +256,11 @@ export async function execute(
                   ? new Date(webhookEntry.createdAt).toLocaleDateString()
                   : "Unknown",
                 inline: true,
-              }
+              },
             );
         } else {
           const availableWebhooks = WebhookManager.getGuildWebhooks(
-            interaction.guild
+            interaction.guild,
           );
           let description = `**Webhook${
             webhookName ? ` "${webhookName}"` : ""
@@ -270,7 +271,8 @@ export async function execute(
               .map((w) => w.name)
               .join(", ")}`;
           } else {
-            description += "No webhooks found. Use `/webhook create` to create one.";
+            description +=
+              "No webhooks found. Use `/webhook create` to create one.";
           }
 
           embed.setDescription(description);
