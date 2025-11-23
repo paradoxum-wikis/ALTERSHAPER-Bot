@@ -128,7 +128,7 @@ export async function execute(
       )
       .setTimestamp();
 
-    await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
+    await interaction.reply({ embeds: [embed] });
   } catch (error) {
     console.error("Error during purge operation:", error);
     await interaction.reply({
