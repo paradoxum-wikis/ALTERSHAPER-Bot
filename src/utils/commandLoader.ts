@@ -25,6 +25,7 @@ import * as anime from "../commands/anime.js";
 import * as ship from "../commands/ship.js";
 import * as webhook from "../commands/webhook.js";
 import * as family from "../commands/family.js";
+import * as giveaway from "../commands/giveaway.js";
 
 export interface Command {
   data: any;
@@ -61,6 +62,7 @@ export function loadCommands(): Collection<string, Command> {
     ship,
     webhook,
     family,
+    giveaway,
   ];
 
   for (const command of commandModules) {
