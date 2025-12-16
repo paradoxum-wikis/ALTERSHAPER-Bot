@@ -1,0 +1,90 @@
+import {
+  ChatInputCommandInteraction,
+  SlashCommandBuilder,
+  EmbedBuilder,
+} from "discord.js";
+
+function buildFormData(assetId: string): { body: string; boundary: string } {
+  const boundary =
+    "----WebKitFormBoundary" + Math.random().toString(36).slice(2);
+  const body = [
+    `--${boundary}`,
+    `Content-Disposition: form-data; name="assetId"`,
+    "",
+    assetId,
+    `--${boundary}--`,
+    "",
+  ].join("\r\n");
+
+  return { body, boundary };
+}
+
+async function getRobloxAssetDownloadLink(assetId: string): Promise<string> {
+  const { body, boundary } = buildFormData(assetId);
+
+  const response = await fetch("https://johnmarctumulak.com/roblox/", {
+    method: "POST",
+    headers: {
+      "Content-Type": `multipart/form-data; boundary=${boundary}`,
+    },
+    body,
+  });
+
+  if (!response.ok) {
+    throw new Error(`API responded with status ${response.status}`);
+  }
+
+  const result = (await response.json()) as { file?: string; error?: unknown };
+
+  if (result.error || !result.file) {
+    throw new Error("API Error: " + JSON.stringify(result));
+  }
+
+  return `https://johnmarctumulak.com/roblox/?download=1&file=${encodeURIComponent(result.file)}`;
+}
+
+export const data = new SlashCommandBuilder()
+  .setName("asset")
+  .setDescription("Fetch a Roblox asset download link by ID")
+  .addStringOption((option) =>
+    option
+      .setName("id")
+      .setDescription("Roblox asset ID (example: 77983090842836)")
+      .setRequired(true),
+  );
+
+export async function execute(
+  interaction: ChatInputCommandInteraction,
+): Promise<void> {
+  const assetId = interaction.options.getString("id", true).trim();
+
+  if (!/^\d+$/.test(assetId)) {
+    await interaction.reply({
+      content: "❌ Please provide a valid numeric asset ID.",
+    });
+    return;
+  }
+
+  await interaction.deferReply();
+
+  try {
+    const downloadUrl = await getRobloxAssetDownloadLink(assetId);
+
+    const embed = new EmbedBuilder()
+      .setColor("#1C92F2")
+      .setTitle("📦 Roblox Asset Download")
+      .setDescription(
+        `Asset **${assetId}** is ready.\n[Click here to download the file](${downloadUrl}).`,
+      )
+      .setFooter({ text: "API is experimental, it may break at any time." })
+      .setTimestamp();
+
+    await interaction.editReply({ embeds: [embed] });
+  } catch (error) {
+    console.error("Failed to fetch Roblox asset:", error);
+    await interaction.editReply({
+      content:
+        "❌ I couldn't retrieve that asset. Please try again later or verify the ID.",
+    });
+  }
+}

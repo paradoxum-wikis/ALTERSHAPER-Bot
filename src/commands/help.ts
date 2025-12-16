@@ -122,6 +122,11 @@ const commands: CommandInfo[] = [
     category: "basic2",
   },
   {
+    name: "/asset -id",
+    value: "Generate a download link for a Roblox asset by ID",
+    category: "basic2",
+  },
+  {
     name: "/link [-fandomusername]",
     value: "Link thy Discord soul with thy Fandom account",
     category: "basic2",
