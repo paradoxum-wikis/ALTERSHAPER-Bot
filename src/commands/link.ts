@@ -226,7 +226,7 @@ export async function execute(
           inline: false,
         },
       )
-      .setFooter({ text: `This confirmation will expire in 60 seconds` })
+      .setFooter({ text: `This confirmation will expire in 60 seconds.` })
       .setTimestamp();
 
     const row = new ActionRowBuilder<ButtonBuilder>().addComponents(

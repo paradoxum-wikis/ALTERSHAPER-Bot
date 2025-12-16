@@ -758,7 +758,7 @@ export async function execute(
             `The **RANKED** battle has been cancelled.\n\n` +
               `*The warriors have chosen not to engage in competitive combat at this time.*`,
           )
-          .setFooter({ text: "🔓 Arena is now available for new battles" });
+          .setFooter({ text: "🔓 Arena is now available for new battles." });
 
         await interaction.editReply({
           content: "",
@@ -955,7 +955,7 @@ export async function execute(
       )
       .setImage("attachment://deathbattle-final.png")
       .setFooter({
-        text: `${isRanked ? "Ranked " : ""}Battle lasted ${turn} turns | 🔓 Arena is now available for new battles`,
+        text: `${isRanked ? "Ranked " : ""}Battle lasted ${turn} turns | 🔓 Arena is now available for new battles.`,
       })
       .setTimestamp();
 

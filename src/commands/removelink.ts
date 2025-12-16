@@ -77,7 +77,7 @@ export async function execute(
           inline: false,
         },
       )
-      .setFooter({ text: "This confirmation expires in 60 seconds" })
+      .setFooter({ text: "This confirmation expires in 60 seconds." })
       .setTimestamp();
 
     const confirmButton = new ButtonBuilder()

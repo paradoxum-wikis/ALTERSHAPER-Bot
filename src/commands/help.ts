@@ -203,7 +203,7 @@ function createEmbed(categoryIndex: number): EmbedBuilder {
         .join("\n\n"),
       inline: false,
     })
-    .setFooter({ text: "ALTERSHAPER - Divine Enforcer of Alteruism" })
+    .setFooter({ text: "ALTERSHAPER - Divine Enforcer of Alteruism." })
     .setTimestamp();
 
   return embed;

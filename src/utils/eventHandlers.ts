@@ -119,7 +119,7 @@ export async function handleMemberJoin(member: GuildMember): Promise<void> {
       )
       .setThumbnail(member.user.displayAvatarURL())
       .setFooter({
-        text: "BOUND BY DUTY TO HONOUR OUR DIVINE ALTER EGO, WE ARE ALTER EGOISTS",
+        text: "BOUND BY DUTY TO HONOUR OUR DIVINE ALTER EGO, WE ARE ALTER EGOISTS.",
       })
       .setTimestamp();
 

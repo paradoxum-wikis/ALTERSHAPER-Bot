@@ -162,7 +162,7 @@ export async function execute(
         },
       )
       .setFooter({
-        text: "The oracles' judgements are never wrong",
+        text: "The oracles' judgements are never wrong.",
       })
       .setTimestamp();
 

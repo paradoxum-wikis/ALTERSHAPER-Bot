@@ -150,7 +150,7 @@ export async function execute(
         inline: true,
       })
       .setFooter({
-        text: "Sacred archives of Nekos",
+        text: "Sacred archives of Nekos.",
       })
       .setTimestamp();
 
