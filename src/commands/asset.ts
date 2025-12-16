@@ -49,7 +49,7 @@ export const data = new SlashCommandBuilder()
   .addStringOption((option) =>
     option
       .setName("id")
-      .setDescription("Roblox asset ID (example: 77983090842836)")
+      .setDescription("Roblox asset ID (e.g: 77983090842836)")
       .setRequired(true),
   );
 
@@ -71,8 +71,8 @@ export async function execute(
     const downloadUrl = await getRobloxAssetDownloadLink(assetId);
 
     const embed = new EmbedBuilder()
-      .setColor("#1C92F2")
-      .setTitle("📦 Roblox Asset Download")
+      .setColor("#D99E82")
+      .setTitle("📦 ASSET RETRIEVED")
       .setDescription(
         `Asset **${assetId}** is ready.\n[Click here to download the file](${downloadUrl}).`,
       )
