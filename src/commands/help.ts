@@ -41,6 +41,11 @@ const commands: CommandInfo[] = [
     value: "Create webhook for the server",
     category: "admin",
   },
+  {
+    name: "/reactionrole >subcommand",
+    value: "Manage reaction role rules (add/remove/list)",
+    category: "admin",
+  },
   // Moderator
   {
     name: "/kick @user [-reason]",

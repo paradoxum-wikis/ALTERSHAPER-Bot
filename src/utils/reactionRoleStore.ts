@@ -1,0 +1,282 @@
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+/**
+ * Reaction role storage helper
+ *
+ * Uses a JSON file at `src/data/reactionRoles.json` so:
+ * - /reactionrole command can save changes
+ * - reaction handler can read current config
+ *
+ * File shape:
+ * {
+ *   "reactionRoleRules": [
+ *     {
+ *       "guildId": "",
+ *       "channelId": "",
+ *       "messageId": "",
+ *       "emoji": "",
+ *       "roleId": "",
+ *       "removeOnUnreact": true
+ *     }
+ *   ]
+ * }
+ */
+
+export type EmojiIdentifier = string;
+
+export interface ReactionRoleRule {
+  guildId: string;
+  channelId: string;
+  messageId: string;
+
+  /**
+   * Emoji identifier:
+   * - Unicode emoji: store a literal like "🖋️"
+   * - Custom emoji: store the numeric emoji id
+   */
+  emoji: EmojiIdentifier;
+
+  roleId: string;
+
+  /**
+   * If true (default), removing the reaction removes the role.
+   * If false, only add-on-react is performed.
+   */
+  removeOnUnreact?: boolean;
+}
+
+export interface ReactionRoleStoreShape {
+  reactionRoleRules: ReactionRoleRule[];
+}
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const DEFAULT_STORE_PATH = path.resolve(
+  __dirname,
+  "..",
+  "data",
+  "reactionRoles.json",
+);
+
+const DEFAULT_STORE: ReactionRoleStoreShape = {
+  reactionRoleRules: [],
+};
+
+function isSnowflake(value: unknown): value is string {
+  return typeof value === "string" && /^\d{15,25}$/.test(value);
+}
+
+function isReactionRoleRule(value: unknown): value is ReactionRoleRule {
+  if (!value || typeof value !== "object") return false;
+  const r = value as Partial<ReactionRoleRule>;
+
+  if (!isSnowflake(r.guildId)) return false;
+  if (!isSnowflake(r.channelId)) return false;
+  if (!isSnowflake(r.messageId)) return false;
+  if (typeof r.emoji !== "string" || r.emoji.trim().length === 0) return false;
+  if (!isSnowflake(r.roleId)) return false;
+
+  if (
+    r.removeOnUnreact !== undefined &&
+    typeof r.removeOnUnreact !== "boolean"
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
+function normalizeStoreShape(value: unknown): ReactionRoleStoreShape {
+  if (!value || typeof value !== "object") return { ...DEFAULT_STORE };
+
+  const obj = value as Partial<ReactionRoleStoreShape>;
+  const rules = Array.isArray(obj.reactionRoleRules)
+    ? obj.reactionRoleRules
+    : [];
+
+  const normalizedRules: ReactionRoleRule[] = [];
+  for (const rule of rules) {
+    if (!isReactionRoleRule(rule)) continue;
+
+    normalizedRules.push({
+      guildId: rule.guildId,
+      channelId: rule.channelId,
+      messageId: rule.messageId,
+      emoji: rule.emoji.trim(),
+      roleId: rule.roleId,
+      removeOnUnreact: rule.removeOnUnreact ?? true,
+    });
+  }
+
+  return { reactionRoleRules: normalizedRules };
+}
+
+function ensureStoreFileExists(storePath: string): void {
+  const dir = path.dirname(storePath);
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+
+  if (!fs.existsSync(storePath)) {
+    fs.writeFileSync(storePath, JSON.stringify(DEFAULT_STORE, null, 2), "utf8");
+  }
+}
+
+export function getReactionRoleStorePath(): string {
+  return DEFAULT_STORE_PATH;
+}
+
+/**
+ * Reads and validates the JSON store from disk.
+ * On any parse or validation issues, it returns a safe default shape instead of throwing.
+ */
+export function readReactionRoleStore(
+  storePath: string = DEFAULT_STORE_PATH,
+): ReactionRoleStoreShape {
+  try {
+    ensureStoreFileExists(storePath);
+
+    const raw = fs.readFileSync(storePath, "utf8");
+    const parsed = JSON.parse(raw) as unknown;
+    return normalizeStoreShape(parsed);
+  } catch {
+    return { ...DEFAULT_STORE };
+  }
+}
+
+/**
+ * Writes the provided store shape to disk atomically-ish (writeFileSync).
+ * The input is also normalized before writing.
+ */
+export function writeReactionRoleStore(
+  store: ReactionRoleStoreShape,
+  storePath: string = DEFAULT_STORE_PATH,
+): void {
+  ensureStoreFileExists(storePath);
+
+  const normalized = normalizeStoreShape(store);
+  fs.writeFileSync(
+    storePath,
+    JSON.stringify(normalized, null, 2) + "\n",
+    "utf8",
+  );
+}
+
+/**
+ * Get all rules, optionally scoped to a guild.
+ */
+export function getReactionRoleRules(params?: {
+  storePath?: string;
+  guildId?: string;
+}): ReactionRoleRule[] {
+  const store = readReactionRoleStore(params?.storePath ?? DEFAULT_STORE_PATH);
+  const all = store.reactionRoleRules;
+
+  if (!params?.guildId) return all;
+  return all.filter((r) => r.guildId === params.guildId);
+}
+
+/**
+ * Add a rule if it doesn't already exist (guild/channel/message/emoji uniqueness).
+ *
+ * Returns `true` if the rule was added, `false` if it already existed.
+ */
+export function addReactionRoleRule(
+  rule: ReactionRoleRule,
+  params?: { storePath?: string },
+): boolean {
+  const storePath = params?.storePath ?? DEFAULT_STORE_PATH;
+  const store = readReactionRoleStore(storePath);
+
+  const normalizedRule: ReactionRoleRule = {
+    guildId: rule.guildId,
+    channelId: rule.channelId,
+    messageId: rule.messageId,
+    emoji: rule.emoji.trim(),
+    roleId: rule.roleId,
+    removeOnUnreact: rule.removeOnUnreact ?? true,
+  };
+
+  const key = reactionRoleRuleKey(normalizedRule);
+  const exists = store.reactionRoleRules.some(
+    (r) => reactionRoleRuleKey(r) === key,
+  );
+  if (exists) return false;
+
+  store.reactionRoleRules.push(normalizedRule);
+  writeReactionRoleStore(store, storePath);
+  return true;
+}
+
+/**
+ * Remove a rule by identity fields.
+ *
+ * Returns `true` if a rule was removed.
+ */
+export function removeReactionRoleRule(
+  ident: Pick<
+    ReactionRoleRule,
+    "guildId" | "channelId" | "messageId" | "emoji"
+  >,
+  params?: { storePath?: string },
+): boolean {
+  const storePath = params?.storePath ?? DEFAULT_STORE_PATH;
+  const store = readReactionRoleStore(storePath);
+
+  const before = store.reactionRoleRules.length;
+  const emoji = ident.emoji.trim();
+
+  store.reactionRoleRules = store.reactionRoleRules.filter((r) => {
+    if (r.guildId !== ident.guildId) return true;
+    if (r.channelId !== ident.channelId) return true;
+    if (r.messageId !== ident.messageId) return true;
+    if (r.emoji !== emoji) return true;
+    return false;
+  });
+
+  const removed = store.reactionRoleRules.length !== before;
+  if (removed) writeReactionRoleStore(store, storePath);
+  return removed;
+}
+
+/**
+ * Matches rules for an observed reaction event.
+ *
+ * Pass `emojiNameOrId` as: `reaction.emoji.id ?? reaction.emoji.name ?? null`
+ */
+export function findMatchingReactionRoleRules(params: {
+  guildId: string;
+  channelId: string;
+  messageId: string;
+  emojiNameOrId: string | null;
+  storePath?: string;
+}): ReactionRoleRule[] {
+  const { guildId, channelId, messageId, emojiNameOrId } = params;
+  if (!emojiNameOrId) return [];
+
+  const rules = getReactionRoleRules({ storePath: params.storePath, guildId });
+  return rules.filter(
+    (r) =>
+      r.channelId === channelId &&
+      r.messageId === messageId &&
+      r.emoji === emojiNameOrId,
+  );
+}
+
+export function reactionRoleRuleKey(
+  r: Pick<ReactionRoleRule, "guildId" | "channelId" | "messageId" | "emoji">,
+): string {
+  return `${r.guildId}:${r.channelId}:${r.messageId}:${r.emoji}`;
+}
+
+/**
+ * Normalizes emoji input from a command option:
+ * - `<:name:id>` / `<a:name:id>` -> returns `"id"`
+ * - otherwise returns trimmed input
+ */
+export function normalizeEmojiInput(raw: string): string {
+  const s = raw.trim();
+  const mentionMatch = s.match(/^<a?:\w+:(\d+)>$/);
+  if (mentionMatch) return mentionMatch[1];
+  return s;
+}
