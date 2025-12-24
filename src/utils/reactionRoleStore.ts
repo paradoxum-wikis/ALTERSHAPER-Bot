@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 /**
  * Reaction role storage helper
  *
- * Uses a JSON file at `src/data/reactionRoles.json` so:
+ * Uses a JSON file at `src/data/reaction_roles.json` so:
  * - /reactionrole command can save changes
  * - reaction handler can read current config
  *
@@ -56,7 +56,7 @@ const __dirname = path.dirname(__filename);
 const DEFAULT_STORE_PATH = path.join(
   process.cwd(),
   "data",
-  "reactionRoles.json",
+  "reaction_roles.json",
 );
 
 const DEFAULT_STORE: ReactionRoleStoreShape = {
