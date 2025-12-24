@@ -693,7 +693,7 @@ export async function execute(
     return;
   }
 
-  if (BattleLockManager.isLocked(interaction.guildId!)) {
+  if (BattleLockManager.isLocked(interaction.guildId!, "battle")) {
     console.log(
       `[DEATHBATTLE] Battle already active in guild ${interaction.guildId}, rejecting new battle`,
     );
@@ -706,8 +706,8 @@ export async function execute(
   }
 
   if (
-    BattleLockManager.isUserInAnyBattle(fighter1User.id) ||
-    BattleLockManager.isUserInAnyBattle(fighter2User.id)
+    BattleLockManager.isUserBusy(fighter1User.id) ||
+    BattleLockManager.isUserBusy(fighter2User.id)
   ) {
     console.log(
       `[DEATHBATTLE] One of the fighters is already in a battle elsewhere`,
@@ -720,10 +720,11 @@ export async function execute(
     return;
   }
 
-  const lockAcquired = BattleLockManager.acquireLock(interaction.guildId!, [
-    fighter1User.id,
-    fighter2User.id,
-  ]);
+  const lockAcquired = BattleLockManager.acquireLock(
+    interaction.guildId!,
+    "battle",
+    [fighter1User.id, fighter2User.id],
+  );
 
   if (!lockAcquired) {
     // This is a fallback, should never happen as it should be caught by the checks above
@@ -972,7 +973,7 @@ export async function execute(
       components: [],
     });
   } finally {
-    BattleLockManager.releaseLock(interaction.guildId!);
+    BattleLockManager.releaseLock(interaction.guildId!, "battle");
     console.log(
       `[DEATHBATTLE] Released battle lock for guild ${interaction.guildId}`,
     );

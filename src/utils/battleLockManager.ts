@@ -1,76 +1,110 @@
-interface BattleLock {
+export type GameType = "battle" | "russian";
+
+interface GameLock {
   guildId: string;
+  gameType: GameType;
   userIds: Set<string>;
   startTime: number;
 }
 
-const locks = new Map<string, BattleLock>();
-export class BattleLockManager {
-  private static readonly BATTLE_TIMEOUT = 1000 * 60 * 5; // 5 minutes
-  private static locks: Map<string, Set<string>> = new Map();
+const activeLocks = new Map<string, Map<GameType, GameLock>>();
 
-  // Checks if a battle is active in a specific server
-  public static isLocked(guildId: string): boolean {
-    this.cleanupOldBattles();
-    return locks.has(guildId);
+export class BattleLockManager {
+  private static readonly TIMEOUT = 1000 * 60 * 5; // 5 minutes
+
+  // Checks if a specific game type is active in a server
+  public static isLocked(guildId: string, gameType: GameType): boolean {
+    this.cleanupOldLocks();
+    const guildLocks = activeLocks.get(guildId);
+    return guildLocks ? guildLocks.has(gameType) : false;
   }
 
-  // if a user is in any battle across any server
-  public static isUserInAnyBattle(userId: string): boolean {
-    this.cleanupOldBattles();
-    for (const lock of locks.values()) {
-      if (lock.userIds.has(userId)) {
-        return true;
+  // Checks if a user is in ANY game across any server
+  public static isUserBusy(userId: string): boolean {
+    this.cleanupOldLocks();
+    for (const guildLocks of activeLocks.values()) {
+      for (const lock of guildLocks.values()) {
+        if (lock.userIds.has(userId)) {
+          return true;
+        }
       }
     }
     return false;
   }
 
-  // Acquires a battle lock for a specific server and users
-  // Returns true if the lock was acquired, false otherwise
-  public static acquireLock(guildId: string, userIds: string[]): boolean {
-    if (this.isLocked(guildId)) {
+  // Acquires a lock for a specific game type in a server
+  public static acquireLock(
+    guildId: string,
+    gameType: GameType,
+    userIds: string[],
+  ): boolean {
+    // Check if this specific game type is already running in this guild
+    if (this.isLocked(guildId, gameType)) {
       return false;
     }
+
+    // Check if any user is already busy in ANY game
     for (const id of userIds) {
-      if (this.isUserInAnyBattle(id)) {
+      if (this.isUserBusy(id)) {
         return false;
       }
     }
 
-    locks.set(guildId, {
+    if (!activeLocks.has(guildId)) {
+      activeLocks.set(guildId, new Map());
+    }
+
+    const guildLocks = activeLocks.get(guildId)!;
+    guildLocks.set(gameType, {
       guildId,
+      gameType,
       userIds: new Set(userIds),
       startTime: Date.now(),
     });
+
     return true;
   }
 
-  // Releases the battle lock for a specific server
-  public static releaseLock(guildId: string): void {
-    locks.delete(guildId);
-  }
-
-  // Clean up old/timed out battles to prevent permanent locks
-  private static cleanupOldBattles(): void {
-    const now = Date.now();
-    const toRemove: string[] = [];
-
-    for (const [guildId, lock] of locks.entries()) {
-      if (now - lock.startTime > this.BATTLE_TIMEOUT) {
-        toRemove.push(guildId);
+  // Releases the lock for a specific game type in a server
+  public static releaseLock(guildId: string, gameType: GameType): void {
+    const guildLocks = activeLocks.get(guildId);
+    if (guildLocks) {
+      guildLocks.delete(gameType);
+      if (guildLocks.size === 0) {
+        activeLocks.delete(guildId);
       }
     }
+  }
 
-    for (const guildId of toRemove) {
-      console.log(
-        `[BATTLE_LOCK] Cleaning up timed out battle in guild ${guildId}`,
-      );
-      this.releaseLock(guildId);
+  private static cleanupOldLocks(): void {
+    const now = Date.now();
+
+    for (const [guildId, guildLocks] of activeLocks.entries()) {
+      for (const [gameType, lock] of guildLocks.entries()) {
+        if (now - lock.startTime > this.TIMEOUT) {
+          console.log(
+            `[LOCK_MANAGER] Cleaning up timed out ${gameType} in guild ${guildId}`,
+          );
+          guildLocks.delete(gameType);
+        }
+      }
+      if (guildLocks.size === 0) {
+        activeLocks.delete(guildId);
+      }
     }
   }
 
   public static getAllLocks(): Map<string, Set<string>> {
-    return new Map(this.locks);
+    const result = new Map<string, Set<string>>();
+    for (const [guildId, guildLocks] of activeLocks.entries()) {
+      const allUsers = new Set<string>();
+      for (const lock of guildLocks.values()) {
+        for (const uid of lock.userIds) {
+          allUsers.add(uid);
+        }
+      }
+      result.set(guildId, allUsers);
+    }
+    return result;
   }
 }
