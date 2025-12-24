@@ -106,19 +106,24 @@ const commands: CommandInfo[] = [
     category: "basic1",
   },
   {
+    name: "/russian @target",
+    value: "Play a game of Russian Roulette with another user",
+    category: "basic3",
+  },
+  {
     name: "/furry [@user]",
     value: "Check whether a user is a furry",
-    category: "basic1",
+    category: "basic2",
   },
   {
     name: "/oracle -question",
     value: "Consult the oracles for divine wisdom (8ball)",
-    category: "basic1",
+    category: "basic3",
   },
   {
     name: "/ship [@user1] [@user2]",
     value: "Ship two users together and see their compatibility",
-    category: "basic1",
+    category: "basic3",
   },
   // Basic - Page 2
   {
@@ -129,7 +134,7 @@ const commands: CommandInfo[] = [
   {
     name: "/asset -id",
     value: "Generate a download link for a Roblox asset by ID",
-    category: "basic2",
+    category: "basic1",
   },
   {
     name: "/link [-fandomusername]",
@@ -144,17 +149,17 @@ const commands: CommandInfo[] = [
   {
     name: "/sins [@user]",
     value: "Behold the records of the damned",
-    category: "basic2",
+    category: "basic3",
   },
   {
     name: "/syncroles",
     value: "Synchronize the top 5 contributors roles with the rankings",
-    category: "basic2",
+    category: "basic3",
   },
   {
     name: "/tdstrivia",
     value: "Fetch a random trivia fact from the TDS Wiki",
-    category: "basic2",
+    category: "basic3",
   },
   {
     name: "/family >subcommand",
@@ -181,14 +186,19 @@ const categories = [
     commands: commands.filter((cmd) => cmd.category === "moderator"),
   },
   {
-    name: "📚 BASIC - USER COMMANDS",
+    name: "📚 BASIC 1",
     description: "**Available to all faithful souls in the sacred halls**",
     commands: commands.filter((cmd) => cmd.category === "basic1"),
   },
   {
-    name: "📚 BASIC - UTILITIES & WIKI",
+    name: "📚 BASIC 2",
     description: "**Available to all faithful souls in the sacred halls**",
     commands: commands.filter((cmd) => cmd.category === "basic2"),
+  },
+  {
+    name: "📚 BASIC 3",
+    description: "**Available to all faithful souls in the sacred halls**",
+    commands: commands.filter((cmd) => cmd.category === "basic3"),
   },
 ];
 
@@ -218,7 +228,7 @@ function createButtons(
   currentPage: number,
   totalPages: number,
 ): ActionRowBuilder<ButtonBuilder> {
-  const buttonLabels = ["⏮️ Admin", "◀️ Previous", "Next ▶️", "Basic 2 ⏭️"];
+  const buttonLabels = ["⏮️ Admin", "◀️ Previous", "Next ▶️", "Basic 3 ⏭️"];
 
   if (currentPage === totalPages - 1) {
     buttonLabels[3] = "Admin ⏭️";
@@ -319,7 +329,7 @@ export async function execute(
         .setDisabled(true),
       new ButtonBuilder()
         .setCustomId("last")
-        .setLabel("Basic 2 ⏭️")
+        .setLabel("Basic 3 ⏭️")
         .setStyle(ButtonStyle.Secondary)
         .setDisabled(true),
     );
