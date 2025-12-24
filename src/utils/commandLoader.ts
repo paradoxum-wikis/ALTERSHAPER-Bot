@@ -28,6 +28,7 @@ import * as family from "../commands/family.js";
 import * as giveaway from "../commands/giveaway.js";
 import * as asset from "../commands/asset.js";
 import * as reactionrole from "../commands/reactionrole.js";
+import * as russian from "../commands/russian.js";
 
 export interface Command {
   data: any;
@@ -67,6 +68,7 @@ export function loadCommands(): Collection<string, Command> {
     giveaway,
     asset,
     reactionrole,
+    russian,
   ];
 
   for (const command of commandModules) {

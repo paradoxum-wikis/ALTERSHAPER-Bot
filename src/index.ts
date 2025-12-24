@@ -49,7 +49,7 @@ class AltershaperBot {
   }
 
   private setupEventListeners(): void {
-    this.client.once("ready", async () => {
+    this.client.once("clientReady", async () => {
       console.log(
         `✅ Altershaper bot hath awakened as ${this.client.user?.tag}`,
       );
