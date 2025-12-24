@@ -379,7 +379,7 @@ export async function execute(
 
     const skipButton = new ButtonBuilder()
       .setCustomId("skip")
-      .setLabel("⏭️ Skip")
+      .setLabel("⏭️ Pass")
       .setStyle(ButtonStyle.Primary)
       .setDisabled(disableButtons);
 
