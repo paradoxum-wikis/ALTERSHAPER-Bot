@@ -9,7 +9,7 @@ interface GameLock {
 
 const activeLocks = new Map<string, Map<GameType, GameLock>>();
 
-export class BattleLockManager {
+export class LockManager {
   private static readonly TIMEOUT = 1000 * 60 * 5; // 5 minutes
 
   // Checks if a specific game type is active in a server

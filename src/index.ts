@@ -19,7 +19,7 @@ import {
   handleReactionAdd,
   handleReactionRemove,
 } from "./utils/eventHandlers.js";
-import { BattleLockManager } from "./utils/battleLockManager.js";
+import { LockManager } from "./utils/lockManager.js";
 
 class AltershaperBot {
   private client: Client;
@@ -289,7 +289,7 @@ class AltershaperBot {
     console.log("🔒 Active Battle Locks:");
     console.log("================================");
 
-    const allLocks = BattleLockManager.getAllLocks();
+    const allLocks = LockManager.getAllLocks();
 
     if (allLocks.size === 0) {
       console.log("No active battle locks\n");

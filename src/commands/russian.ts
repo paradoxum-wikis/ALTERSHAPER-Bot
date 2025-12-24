@@ -13,7 +13,7 @@ import {
 import { createCanvas, loadImage } from "canvas";
 import path from "path";
 import { RussianStatsManager } from "../utils/russianStatsManager.js";
-import { BattleLockManager } from "../utils/battleLockManager.js";
+import { LockManager } from "../utils/lockManager.js";
 
 export const data = new SlashCommandBuilder()
   .setName("russian")
@@ -226,7 +226,7 @@ export async function execute(
     return;
   }
 
-  if (BattleLockManager.isLocked(interaction.guildId!, "russian")) {
+  if (LockManager.isLocked(interaction.guildId!, "russian")) {
     await interaction.reply({
       content:
         "**A game of Russian Roulette is already in progress in this server!**",
@@ -236,8 +236,8 @@ export async function execute(
   }
 
   if (
-    BattleLockManager.isUserBusy(inviterUser.id) ||
-    BattleLockManager.isUserBusy(targetUser.id)
+    LockManager.isUserBusy(inviterUser.id) ||
+    LockManager.isUserBusy(targetUser.id)
   ) {
     await interaction.reply({
       content: "**One of the players is already in a game!**",
@@ -246,7 +246,7 @@ export async function execute(
     return;
   }
 
-  const lockAcquired = BattleLockManager.acquireLock(
+  const lockAcquired = LockManager.acquireLock(
     interaction.guildId!,
     "russian",
     [inviterUser.id, targetUser.id],
@@ -267,7 +267,7 @@ export async function execute(
   );
 
   if (!consentGiven) {
-    BattleLockManager.releaseLock(interaction.guildId!, "russian");
+    LockManager.releaseLock(interaction.guildId!, "russian");
     await interaction.editReply({
       content: "**Game cancelled! One or both players did not accept.**",
       embeds: [],
@@ -498,7 +498,7 @@ export async function execute(
   });
 
   collector.on("end", (collected, reason) => {
-    BattleLockManager.releaseLock(interaction.guildId!, "russian");
+    LockManager.releaseLock(interaction.guildId!, "russian");
     if (turnTimer) clearTimeout(turnTimer);
     if (reason === "time") {
       interaction.editReply({
