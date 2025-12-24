@@ -53,9 +53,8 @@ export interface ReactionRoleStoreShape {
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const DEFAULT_STORE_PATH = path.resolve(
-  __dirname,
-  "..",
+const DEFAULT_STORE_PATH = path.join(
+  process.cwd(),
   "data",
   "reactionRoles.json",
 );
