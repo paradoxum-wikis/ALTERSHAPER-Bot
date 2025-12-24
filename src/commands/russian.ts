@@ -291,15 +291,17 @@ export async function execute(
     "{user} closes their eyes and shoots... *Click*. Safe for now.",
     "{user} tries to end it all for {target}... but fate has other plans. *Click*.",
     "{user} fires at {target}... but it's not their turn to die. *Click*.",
+    "{user} tries their luck against {target}... *Click*. Fortune favors {target} this time.",
   ];
 
   const shootSelfFlavorTexts = [
     "{user} puts the gun to their head... *Click*. They survive.",
-    "{user} takes a deep breath and pulls the trigger on themselves... *Click*.",
-    "{user} laughs maniacally and shoots themselves... but it's a blank.",
+    "{user} takes a deep breath and pulls the trigger on themself... *Click*.",
+    "{user} laughs maniacally and shoots themself... but it's empty.",
     "{user} tests their luck against the reaper... *Click*. And wins.",
     "{user} sweats nervously as they fire at their own temple... *Click*.",
     "{user} challenges death itself... *Click*. And lives to tell the tale..",
+    "{user} wanted a taste of adrenaline. *Click*. Luckily, nothing happens.",
   ];
 
   const skipFlavorTexts = [
@@ -309,6 +311,7 @@ export async function execute(
     "{user} stares at {target} and gives them the gun.",
     "{user} chooses to skip their turn. Cowardice or strategy?",
     "{user} shrugs and lets {target} take the risk instead.",
+    "{user} can't bring themself to pull the trigger and passes.",
   ];
 
   const shootDeathFlavorTexts = [
@@ -322,10 +325,10 @@ export async function execute(
   ];
 
   const shootSelfDeathFlavorTexts = [
-    "**BANG!** {user} shot themselves! {target} watches in horror as they win by default.",
+    "**BANG!** {user} shot themself! {target} watches in horror as they win by default.",
     "**BANG!** {user} took the easy way out. {target} survives the game.",
     "**BANG!** {user}'s luck ran out. {target} is the last one standing.",
-    "**BANG!** {user} pulls the trigger on themselves and falls. {target} is free.",
+    "**BANG!** {user} pulls the trigger on themself and falls. {target} is free.",
     "**BANG!** Silence follows the shot. {user} is gone. {target} remains.",
     "**BANG!** {user} ends their own game. {target} breathes a sigh of relief.",
     "**BANG!** {user} did not awaken a Persona, instead they are dead.",
