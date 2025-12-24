@@ -489,7 +489,7 @@ export async function execute(
         interaction.guildId || undefined,
       );
 
-      await updateGame(message, filter, true, victim);
+      await updateGame(message, filter, true);
       collector.stop("game_over");
     } else {
       await updateGame(message, "none", false);
