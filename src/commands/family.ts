@@ -391,7 +391,7 @@ export async function execute(
             const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
               new ButtonBuilder()
                 .setCustomId("accept_marriage")
-                .setLabel("Accept 💍")
+                .setLabel("Accept")
                 .setStyle(ButtonStyle.Success),
               new ButtonBuilder()
                 .setCustomId("decline_marriage")
@@ -501,7 +501,7 @@ export async function execute(
         const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
           new ButtonBuilder()
             .setCustomId("accept_marriage")
-            .setLabel("Accept 💍")
+            .setLabel("Accept")
             .setStyle(ButtonStyle.Success),
           new ButtonBuilder()
             .setCustomId("decline_marriage")
@@ -756,7 +756,7 @@ export async function execute(
             const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
               new ButtonBuilder()
                 .setCustomId("accept_adoption")
-                .setLabel("Accept 👶")
+                .setLabel("Accept")
                 .setStyle(ButtonStyle.Success),
               new ButtonBuilder()
                 .setCustomId("decline_adoption")
@@ -866,7 +866,7 @@ export async function execute(
         const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
           new ButtonBuilder()
             .setCustomId("accept_adoption")
-            .setLabel("Accept 👶")
+            .setLabel("Accept")
             .setStyle(ButtonStyle.Success),
           new ButtonBuilder()
             .setCustomId("decline_adoption")
@@ -1134,7 +1134,7 @@ export async function execute(
             const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
               new ButtonBuilder()
                 .setCustomId("accept_sibling")
-                .setLabel("Accept 👫")
+                .setLabel("Accept")
                 .setStyle(ButtonStyle.Success),
               new ButtonBuilder()
                 .setCustomId("decline_sibling")
@@ -1243,7 +1243,7 @@ export async function execute(
         const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
           new ButtonBuilder()
             .setCustomId("accept_sibling")
-            .setLabel("Accept 👫")
+            .setLabel("Accept")
             .setStyle(ButtonStyle.Success),
           new ButtonBuilder()
             .setCustomId("decline_sibling")
