@@ -13,16 +13,44 @@ function cleanWikitext(text: string): string {
 }
 
 export const data = new SlashCommandBuilder()
-  .setName("tdstrivia")
-  .setDescription("Get a random trivia fact from the TDS Wiki");
+  .setName("trivia")
+  .setDescription("Get a random trivia fact from a Wiki")
+  .addStringOption((option) =>
+    option
+      .setName("game")
+      .setDescription("The game to fetch trivia for")
+      .setRequired(false)
+      .addChoices(
+        { name: "ALTER EGO", value: "ae" },
+        { name: "Tower Defense Simulator", value: "tds" },
+      ),
+  );
 
 export async function execute(
   interaction: ChatInputCommandInteraction,
 ): Promise<void> {
+  const game = interaction.options.getString("game") || "alterego";
+  let url = "";
+  let title = "";
+  let footer = "";
+  let color = "";
+
+  if (game === "tds") {
+    url = "https://tds.fandom.com/wiki/Template:DYKBoxContent?action=raw";
+    title = "📚 Did you know that in Tower Defense Simulator:";
+    footer =
+      "Verily, I have drawn forth this knowledge from the annals of TDS Wiki.";
+    color = "#33577A";
+  } else {
+    url = "https://alter-ego.fandom.com/wiki/Template:DYK?action=raw";
+    title = "📚 Did you know that in ALTER EGO:";
+    footer =
+      "Verily, I have drawn forth this knowledge from the annals of ALTERPEDIA.";
+    color = "#e61f24";
+  }
+
   try {
-    const response = await fetch(
-      "https://tds.fandom.com/wiki/Template:DYKBoxContent?action=raw",
-    );
+    const response = await fetch(url);
     if (!response.ok) {
       throw new Error("Failed to fetch trivia");
     }
@@ -37,11 +65,11 @@ export async function execute(
     const trivia = options[Math.floor(Math.random() * options.length)];
     const cleanedTrivia = cleanWikitext(trivia);
     const embed = new EmbedBuilder()
-      .setColor("#33577A")
-      .setTitle("📚 Did you know that in TDS:")
+      .setColor(color as any)
+      .setTitle(title)
       .setDescription(cleanedTrivia)
       .setFooter({
-        text: "Verily, I have drawn forth this knowledge from the annals of the TDS Wiki.",
+        text: footer,
       })
       .setTimestamp();
     await interaction.reply({ embeds: [embed] });

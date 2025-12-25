@@ -16,7 +16,7 @@ import * as checklink from "../commands/checklink.js";
 import * as syncroles from "../commands/syncroles.js";
 import * as slowmode from "../commands/slowmode.js";
 import * as oracle from "../commands/oracle.js";
-import * as tdstrivia from "../commands/tdstrivia.js";
+import * as trivia from "../commands/trivia.js";
 import * as aura from "../commands/aura.js";
 import * as battle from "../commands/battle.js";
 import * as battlestats from "../commands/battlestats.js";
@@ -56,7 +56,7 @@ export function loadCommands(): Collection<string, Command> {
     syncroles,
     slowmode,
     oracle,
-    tdstrivia,
+    trivia,
     aura,
     battle,
     battlestats,

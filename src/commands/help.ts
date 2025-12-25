@@ -157,8 +157,8 @@ const commands: CommandInfo[] = [
     category: "basic3",
   },
   {
-    name: "/tdstrivia",
-    value: "Fetch a random trivia fact from the TDS Wiki",
+    name: "/trivia [-game]",
+    value: "Fetch a random trivia fact from a wiki",
     category: "basic3",
   },
   {
