@@ -14,7 +14,7 @@ function cleanWikitext(text: string): string {
 
 export const data = new SlashCommandBuilder()
   .setName("trivia")
-  .setDescription("Get a random trivia fact from a Wiki")
+  .setDescription("Get a random trivia fact from a wiki")
   .addStringOption((option) =>
     option
       .setName("game")
