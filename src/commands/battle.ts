@@ -457,6 +457,24 @@ async function simulateBattleStep(
         narration = `👊 **${attacker.name}** executes the KJH Combo! (+2 DEF, +1 SPD)`;
         break;
     }
+
+    // Ability Block
+    if (damage > 0) {
+      const unblockableMoves = [
+        "Airstrike",
+        "Great Will",
+        "Blade of the Old World",
+        "Axis Cleave",
+        "Freikugel",
+      ];
+
+      const canBlockAbility = !unblockableMoves.includes(abilityUsed!);
+      if (canBlockAbility && Math.random() < 0.1) {
+        damage = Math.max(1, damage - defender.defense);
+        action = "block";
+        narration += ` ...but 🛡️ **${defender.name}** blocked the ability!`;
+      }
+    }
   } else {
     const baseDamage = attacker.attack;
     const critRoll = Math.random();
@@ -519,7 +537,7 @@ async function simulateBattleStep(
   }
 
   if (damage > 0) {
-    if (useAbility) {
+    if (useAbility && action !== "block") {
       if (abilityUsed === "Relic of Exo") {
         const effectiveDefense = Math.floor(defender.defense * 0.3); // 70% bypass
         damage = Math.max(1, damage - effectiveDefense);
