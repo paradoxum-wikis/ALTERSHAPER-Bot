@@ -373,12 +373,12 @@ async function simulateBattleStep(
           const divineHeal = Math.floor(attacker.maxHp * 0.1);
           attacker.hp = Math.min(attacker.hp + divineHeal, attacker.maxHp);
           attacker.defense += 6;
-          narration = `⭐ **${attacker.name}** prayed and received the labyrinth's divine intervention, healing ${divineHeal} HP and fortifying their body (+6 DEF)!`;
+          narration = `⭐ **${attacker.name}** prayed and received the labyrinth's divine intervention, healing ${divineHeal} HP and fortifying their body! (+6 DEF)`;
         } else {
           const divineHeal = Math.floor(attacker.maxHp * 0.25);
           attacker.hp = Math.min(attacker.hp + divineHeal, attacker.maxHp);
           attacker.defense += 3;
-          narration = `⭐ **${attacker.name}** prayed and received the labyrinth's divine intervention, healing ${divineHeal} HP and gaining resilience (+3 DEF)!`;
+          narration = `⭐ **${attacker.name}** prayed and received the labyrinth's divine intervention, healing ${divineHeal} HP and gaining resilience! (+3 DEF)`;
         }
         break;
       case "Great Will":
@@ -422,6 +422,7 @@ async function simulateBattleStep(
         }`;
         break;
       case "Spectral Exonorator":
+        const oldHp = attacker.hp;
         const tempHp = attacker.hp;
         attacker.hp = defender.hp;
         defender.hp = tempHp;
@@ -442,7 +443,20 @@ async function simulateBattleStep(
         attacker.speed = defender.speed;
         defender.speed = tempSpd;
 
-        narration = `👻 **${attacker.name}** uses Spectral Exonorator, swapping bodies and souls with **${defender.name}**!`;
+        let bonusMsg = "";
+        if (attacker.hp < oldHp) {
+          attacker.attack += 2;
+          bonusMsg = "(+2 ATK)";
+        } else if (attacker.hp > oldHp) {
+          attacker.defense += 2;
+          bonusMsg = "(+2 DEF)";
+        }
+
+        attacker.abilities = attacker.abilities.filter(
+          (a) => a !== "Spectral Exonorator",
+        );
+
+        narration = `👻 **${attacker.name}** uses Spectral Exonorator, swapping bodies and souls with **${defender.name}**! This ability is no longer available for **${attacker.name}**. ${bonusMsg}`;
         break;
       case "Axis Cleave":
         damage = Math.ceil(attacker.attack * 0.5);
