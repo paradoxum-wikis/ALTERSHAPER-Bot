@@ -128,6 +128,7 @@ async function handleConsentPhase(
 async function createRussianImage(
   targetUser: User,
   targetName: string,
+  currentTurnUser: User,
   filter: "none" | "bw" | "red" = "none",
 ): Promise<Buffer> {
   const canvas = createCanvas(1920, 1080);
@@ -157,7 +158,7 @@ async function createRussianImage(
     ctx.fillStyle = "#333";
     ctx.fillRect(0, 0, 1920, 1080);
     ctx.fillStyle = "#FFF";
-    ctx.font = "bold 100px Arial";
+    ctx.font = "bold 100px Arial, sans-serif";
     ctx.textAlign = "center";
     ctx.fillText("RUSSIAN ROULETTE", 960, 540);
   }
@@ -173,10 +174,19 @@ async function createRussianImage(
     ctx.drawImage(avatar, x, y, avatarSize, avatarSize);
 
     ctx.fillStyle = "#FFFFFF";
-    ctx.font = "bold 60px Verdana";
+    ctx.font = "bold 60px Verdana, sans-serif";
     ctx.textAlign = "center";
 
     ctx.fillText(targetName, 960, y + avatarSize + 155);
+
+    const turnAvatar = await loadImage(
+      currentTurnUser.displayAvatarURL({ extension: "png", size: 256 }),
+    );
+    const turnAvatarSize = 216;
+    const turnX = 90;
+    const turnY = 1080 - turnAvatarSize - 90;
+
+    ctx.drawImage(turnAvatar, turnX, turnY, turnAvatarSize, turnAvatarSize);
 
     if (filter !== "none") {
       const imageData = ctx.getImageData(0, 0, 1920, 1080);
@@ -351,6 +361,7 @@ export async function execute(
     const imageBuffer = await createRussianImage(
       target,
       target.username,
+      currentTurnUser,
       filter,
     );
     const attachment = new AttachmentBuilder(imageBuffer, {
