@@ -96,6 +96,7 @@ export async function execute(
   const embed = new EmbedBuilder()
     .setColor(level === 0 ? "#2F2F2F" : level === 11 ? "#ad32ff" : "#800080")
     .setTitle("🔮 Aura Reading")
+    .setURL("https://alterego.wiki/Help:ALTERSHAPER/Aura")
     .setDescription(`The mystical aura of **${displayName}** has been divined!`)
     .addFields(
       { name: "🌟 Aura Strength", value: `${percentage}%`, inline: true },
