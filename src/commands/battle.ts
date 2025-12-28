@@ -369,7 +369,7 @@ async function simulateBattleStep(
         narration = `✈️ **${attacker.name}** calls in an airstrike from above, ${airstrikes} bomber${airstrikes > 1 ? "s" : ""} raining destruction!`;
         break;
       case "Divine Intervention":
-        if (attacker.hp > Math.floor(attacker.maxHp / 2)) {
+        if (attacker.hp >= Math.floor(attacker.maxHp / 2)) {
           const divineHeal = Math.floor(attacker.maxHp * 0.1);
           attacker.hp = Math.min(attacker.hp + divineHeal, attacker.maxHp);
           attacker.defense += 6;
@@ -404,7 +404,7 @@ async function simulateBattleStep(
         break;
       case "Bloodlust":
         damage = Math.floor(attacker.attack * 0.8);
-        const drainAmount = Math.floor(damage * 0.9);
+        const drainAmount = Math.floor(damage * 0.5);
         attacker.hp = Math.min(attacker.hp + drainAmount, attacker.maxHp);
         narration = `🧛 **${attacker.name}** sucks **${defender.name}**'s blood, draining ${drainAmount} HP for themself!`;
         break;
