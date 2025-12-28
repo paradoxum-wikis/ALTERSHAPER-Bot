@@ -408,6 +408,54 @@ async function simulateBattleStep(
         attacker.hp = Math.min(attacker.hp + drainAmount, attacker.maxHp);
         narration = `🧛 **${attacker.name}** sucks **${defender.name}**'s blood, draining ${drainAmount} HP for themself!`;
         break;
+      case "Blade of the Old World":
+        const firstHit = Math.floor(defender.hp * 0.22);
+        damage = firstHit;
+        let extraHit = false;
+        if (Math.random() < 0.25) {
+          const secondHit = Math.floor((defender.hp - firstHit) * 0.22);
+          damage += secondHit;
+          extraHit = true;
+        }
+        narration = `🗡️ **${attacker.name}** wields the Blade of the Old World, slicing through reality!${
+          extraHit ? " A second slash follows!" : ""
+        }`;
+        break;
+      case "Spectral Exonorator":
+        const tempHp = attacker.hp;
+        attacker.hp = defender.hp;
+        defender.hp = tempHp;
+
+        const tempMaxHp = attacker.maxHp;
+        attacker.maxHp = defender.maxHp;
+        defender.maxHp = tempMaxHp;
+
+        const tempAtk = attacker.attack;
+        attacker.attack = defender.attack;
+        defender.attack = tempAtk;
+
+        const tempDef = attacker.defense;
+        attacker.defense = defender.defense;
+        defender.defense = tempDef;
+
+        const tempSpd = attacker.speed;
+        attacker.speed = defender.speed;
+        defender.speed = tempSpd;
+
+        narration = `👻 **${attacker.name}** uses Spectral Exonorator, swapping bodies and souls with **${defender.name}**!`;
+        break;
+      case "Axis Cleave":
+        damage = Math.ceil(attacker.attack * 0.5);
+        const axisHeal = Math.ceil(attacker.attack * 0.5);
+        attacker.hp = Math.min(attacker.hp + axisHeal, attacker.maxHp);
+        narration = `🪓 **${attacker.name}** performs an Axis Cleave, dealing damage and converting energy to heal ${axisHeal} HP!`;
+        break;
+      case "Kim Ji Hoon Combo":
+        damage = Math.floor(attacker.attack * 1.25);
+        attacker.defense += 2;
+        attacker.speed += 1;
+        narration = `👊 **${attacker.name}** executes the KJH Combo! (+2 DEF, +1 SPD)`;
+        break;
     }
   } else {
     const baseDamage = attacker.attack;
@@ -478,6 +526,8 @@ async function simulateBattleStep(
       } else if (abilityUsed === "Soul Strike") {
         const effectiveDefense = Math.floor(defender.defense * 0.4); // 60% bypass
         damage = Math.max(1, damage - effectiveDefense);
+      } else if (abilityUsed === "Blade of the Old World") {
+        // Ignores defense
       } else {
         damage = Math.max(1, damage - Math.floor(defender.defense * 0.5));
       }

@@ -101,6 +101,10 @@ export function generateFighter(
     "Toxic Fumes",
     "Freikugel",
     "Bloodlust",
+    "Blade of the Old World",
+    "Spectral Exonorator",
+    "Axis Cleave",
+    "Kim Ji Hoon Combo",
   ];
 
   let seed = hashString(displayName) + 1000;
