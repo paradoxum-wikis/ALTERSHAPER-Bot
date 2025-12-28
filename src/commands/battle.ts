@@ -186,7 +186,7 @@ async function createBattleImage(
       ctx.fillStyle = "#2F3136";
       ctx.fillRect(0, 0, 1920, 1080);
       ctx.fillStyle = "#FFFFFF";
-      ctx.font = "bold 66px Verdana";
+      ctx.font = "bold 66px Verdana, sans-serif";
       ctx.textAlign = "center";
       ctx.fillText("DEATHBATTLE", 960, 540);
     }
@@ -238,7 +238,7 @@ async function createBattleImage(
     }
 
     ctx.fillStyle = "#FFFFFF";
-    ctx.font = "bold 66px Verdana";
+    ctx.font = "bold 66px Verdana, sans-serif";
     ctx.textAlign = "center";
 
     // name fighter location
@@ -250,7 +250,7 @@ async function createBattleImage(
     ctx.fillStyle = "#2F3136";
     ctx.fillRect(0, 0, 1920, 1080);
     ctx.fillStyle = "#FFFFFF";
-    ctx.font = "bold 66px Verdana";
+    ctx.font = "bold 66px Verdana, sans-serif";
     ctx.textAlign = "center";
     ctx.fillText("DEATHBATTLE", 960, 540);
     return { buffer: canvas.toBuffer(), backgroundFileName: "deathbattle.png" };
