@@ -148,19 +148,17 @@ export async function execute(
       (await userProfileResponse.json()) as FandomUserProfileResponse;
 
     if (!userProfileData.userData || !userProfileData.userData.discordHandle) {
-      const profileUrl = `https://alter-ego.fandom.com/wiki/User:${encodeURIComponent(canonicalFandomUsername)}`;
+      const verifyUrl = `https://alter-ego.fandom.com/wiki/Special:VerifyUser/${encodeURIComponent(canonicalFandomUsername)}?user=${encodeURIComponent(interaction.user.username)}&c=wb&ch=verify-me`;
       const tutorialEmbed = new EmbedBuilder()
         .setColor("#FFA500")
         .setTitle("❓ HOW TO LINK YOUR FANDOM ACCOUNT")
         .setDescription(
           `**The alter "${canonicalFandomUsername}" hath not revealed one's Discord handle on the profile!**\n\n` +
             `To link your Discord, follow these steps:\n\n` +
-            `1. Visit your Fandom profile: [Edit Profile](${profileUrl})\n` +
-            `2. Click the **"Edit profile"** button on the top right of your user page.\n` +
-            `3. Find the **"Discord"** field.\n` +
-            `4. Enter your Discord username (e.g. \`${interaction.user.username}\`).\n` +
-            `5. Save your profile.\n\n` +
-            `Once done, run this command again.`,
+            `1. Open the verification page: [Special:VerifyUser](${verifyUrl})\n` +
+            `2. Follow the instructions on that page to add/confirm your Discord handle.\n` +
+            `3. Once complete, return here and run \`/link\` again.\n\n` +
+            `If the page warns about a username mismatch, ensure you are logged into the correct Fandom account.`,
         )
         .setFooter({
           text: "If you have set your Discord and still see this, double-check for typos or try again in a few minutes.",
@@ -180,20 +178,18 @@ export async function execute(
       fandomDiscordHandle.toLowerCase() !==
       discordUserIdentifierToCompare.toLowerCase()
     ) {
-      const profileUrl = `https://alter-ego.fandom.com/wiki/User:${encodeURIComponent(canonicalFandomUsername)}`;
+      const verifyUrl = `https://alter-ego.fandom.com/wiki/Special:VerifyUser/${encodeURIComponent(canonicalFandomUsername)}?user=${encodeURIComponent(interaction.user.username)}&c=wb&ch=verify-me`;
       const tutorialEmbed = new EmbedBuilder()
         .setColor("#FFA500")
         .setTitle("❓ DISCORD HANDLE MISMATCH")
         .setDescription(
           `**A mismatch in the Dirac sea!**\n\n` +
-            `The Discord handle on Fandom ("${fandomDiscordHandle}") doth not align with thy current Discord username ("${interaction.user.username}"). Didst thou input the correct username?\n\n` +
-            `To fix this:\n` +
-            `1. Visit your Fandom profile: [Edit Profile](${profileUrl})\n` +
-            `2. Click the **"Edit profile"** button on the top right of your user page.\n` +
-            `3. Find the **"Discord"** field.\n` +
-            `4. Enter your correct Discord username (\`${interaction.user.username}\`).\n` +
-            `5. Save your profile.\n\n` +
-            `Once done, run this command again.`,
+            `The Discord handle on Fandom ("${fandomDiscordHandle}") doth not align with thy current Discord username ("${interaction.user.username}").\n\n` +
+            `To fix this, re-run verification using the Special page:\n\n` +
+            `1. Open: [Special:VerifyUser](${verifyUrl})\n` +
+            `2. Follow the instructions to set/confirm your Discord handle.\n` +
+            `3. Return here and run \`/link\` again.\n\n` +
+            `Make sure you are logged into the correct Fandom account for "${canonicalFandomUsername}".`,
         )
         .setFooter({
           text: "If you have set your Discord and still see this, double-check for typos or try again in a few minutes.",
