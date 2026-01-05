@@ -111,6 +111,11 @@ const commands: CommandInfo[] = [
     category: "basic3",
   },
   {
+    name: "/russianstats >subcommand [@user] [-limit]",
+    value: "View Russian Roulette statistics and leaderboard",
+    category: "basic3",
+  },
+  {
     name: "/furry [@user]",
     value: "Check whether a user is a furry",
     category: "basic2",
