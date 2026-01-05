@@ -148,7 +148,7 @@ export async function execute(
       (await userProfileResponse.json()) as FandomUserProfileResponse;
 
     if (!userProfileData.userData || !userProfileData.userData.discordHandle) {
-      const verifyUrl = `https://alter-ego.fandom.com/wiki/Special:VerifyUser/${encodeURIComponent(canonicalFandomUsername)}?user=${encodeURIComponent(interaction.user.username)}&c=wb&ch=verify-me`;
+      const verifyUrl = `https://alter-ego.fandom.com/wiki/Special:VerifyUser/${encodeURIComponent(canonicalFandomUsername)}?user=${encodeURIComponent(interaction.user.username)}&c=wb&ch=verify-me&useskin=fandomdesktop`;
       const tutorialEmbed = new EmbedBuilder()
         .setColor("#FFA500")
         .setTitle("❓ HOW TO LINK YOUR FANDOM ACCOUNT")
@@ -178,7 +178,7 @@ export async function execute(
       fandomDiscordHandle.toLowerCase() !==
       discordUserIdentifierToCompare.toLowerCase()
     ) {
-      const verifyUrl = `https://alter-ego.fandom.com/wiki/Special:VerifyUser/${encodeURIComponent(canonicalFandomUsername)}?user=${encodeURIComponent(interaction.user.username)}&c=wb&ch=verify-me`;
+      const verifyUrl = `https://alter-ego.fandom.com/wiki/Special:VerifyUser/${encodeURIComponent(canonicalFandomUsername)}?user=${encodeURIComponent(interaction.user.username)}&c=wb&ch=verify-me&useskin=fandomdesktop`;
       const tutorialEmbed = new EmbedBuilder()
         .setColor("#FFA500")
         .setTitle("❓ DISCORD HANDLE MISMATCH")
