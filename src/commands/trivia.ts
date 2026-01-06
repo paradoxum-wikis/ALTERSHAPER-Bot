@@ -42,7 +42,7 @@ export async function execute(
       "Verily, I have drawn forth this knowledge from the annals of TDS Wiki.";
     color = "#33577A";
   } else {
-    url = "https://alter-ego.fandom.com/wiki/Template:DYK?action=raw";
+    url = "https://alter-ego.fandom.com/wiki/ALTERPEDIA/DYK?action=raw";
     title = "📚 Did you know that in ALTER EGO:";
     footer =
       "Verily, I have drawn forth this knowledge from the annals of ALTERPEDIA.";
