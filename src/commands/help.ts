@@ -101,7 +101,7 @@ const commands: CommandInfo[] = [
     category: "basic1",
   },
   {
-    name: "/battlestats >subcommand [@user] [-mode]",
+    name: "/battlestats >subcommand [@user] [-mode] [-limit]",
     value: "View deathbattle statistics and leaderboards",
     category: "basic1",
   },

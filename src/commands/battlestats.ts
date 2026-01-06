@@ -6,6 +6,11 @@ import {
 } from "discord.js";
 import { BattleStatsManager } from "../utils/battleStatsManager.js";
 
+function clampLimit(value: number, max: number): number {
+  if (!Number.isFinite(value)) return 10;
+  return Math.max(1, Math.min(max, value));
+}
+
 export const data = new SlashCommandBuilder()
   .setName("battlestats")
   .setDescription("View deathbattle statistics and leaderboards")
@@ -50,6 +55,14 @@ export const data = new SlashCommandBuilder()
             { name: "Ranked", value: "ranked" },
           )
           .setRequired(false),
+      )
+      .addIntegerOption((option) =>
+        option
+          .setName("limit")
+          .setDescription("How many warriors to show (defaults to 10, max 25)")
+          .setMinValue(1)
+          .setMaxValue(25)
+          .setRequired(false),
       ),
   )
   .addSubcommand((subcommand) =>
@@ -75,6 +88,14 @@ export const data = new SlashCommandBuilder()
             { name: "Ranked", value: "ranked" },
             { name: "All", value: "all" },
           )
+          .setRequired(false),
+      )
+      .addIntegerOption((option) =>
+        option
+          .setName("limit")
+          .setDescription("How many battles to show (defaults to 10, max 25)")
+          .setMinValue(1)
+          .setMaxValue(25)
           .setRequired(false),
       ),
   );
@@ -188,8 +209,13 @@ export async function execute(
       case "leaderboard": {
         const mode = interaction.options.getString("mode") || "normal";
         const isRanked = mode === "ranked";
+        const limit = clampLimit(
+          interaction.options.getInteger("limit") || 10,
+          25,
+        );
+
         const leaderboard = await BattleStatsManager.getLeaderboard(
-          10,
+          limit,
           isRanked,
         );
 
@@ -238,6 +264,10 @@ export async function execute(
         const targetUser =
           interaction.options.getUser("user") || interaction.user;
         const mode = interaction.options.getString("mode") || "all";
+        const limit = clampLimit(
+          interaction.options.getInteger("limit") || 10,
+          25,
+        );
 
         let rankedFilter: boolean | undefined;
         if (mode === "normal") rankedFilter = false;
@@ -246,7 +276,7 @@ export async function execute(
 
         const history = await BattleStatsManager.getUserBattleHistory(
           targetUser.id,
-          10,
+          limit,
           rankedFilter,
         );
 
