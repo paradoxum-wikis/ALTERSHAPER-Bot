@@ -302,6 +302,9 @@ export async function execute(
     "{user} tries to end it all for {target}... but fate has other plans. *Click*.",
     "{user} fires at {target}... but it's not their turn to die. *Click*.",
     "{user} tries their luck against {target}... *Click*. Fortune favors {target} this time.",
+    "Pointing the gun at {target}, {user} pulls the trigger... *Click*. Nothing happens.",
+    "{user}'s heart beats faster as they aim at {target}... *Click*. {target} lives.",
+    "Betting it all on this chamber, {user} fires the gun... *Click*. It's not this one.",
   ];
 
   const shootSelfFlavorTexts = [
@@ -312,6 +315,9 @@ export async function execute(
     "{user} sweats nervously as they fire at their own temple... *Click*.",
     "{user} challenges death itself... *Click*. And lives to tell the tale..",
     "{user} wanted a taste of adrenaline. *Click*. Luckily, nothing happens.",
+    "With a gun to their head, {user} fires. *Click*. Nothing happens.",
+    "Perfunctorily aiming at their head... *Click*. No bullet for {user} .",
+    "{user} trembles as they point the gun at themself... *Click* They live.",
   ];
 
   const skipFlavorTexts = [
@@ -322,6 +328,9 @@ export async function execute(
     "{user} chooses to skip their turn. Cowardice or strategy?",
     "{user} shrugs and lets {target} take the risk instead.",
     "{user} can't bring themself to pull the trigger and passes.",
+    "{user} takes a deep breath and passes the gun to {target}.",
+    "Fate tempts, but {user} chooses to pass.",
+    "Perhaps today is not the day for {user} to face their fears, they passes.",
   ];
 
   const shootDeathFlavorTexts = [
@@ -330,8 +339,11 @@ export async function execute(
     "**BANG!** A loud shot rings out as {user} eliminates {target}. The game is over.",
     "**BANG!** {user} fires the fatal shot at {target}. Survival is the only prize.",
     "**BANG!** {target} falls as {user} lowers the smoking gun. It is done.",
-    "**BANG!** {target} is no longer in the same world as {target}.",
+    "**BANG!** {target} is no longer in the same world as {user}. {user} is walks away.",
     "**BANG!** {user}'s torment has concluded, farewell, {target}.",
+    "**BANG!** {target}'s fate is sealed as {user} fires the killing shot.",
+    "**BANG!** {target}'s story ends here, {user} is victorious.",
+    "**BANG!** In the end, {target}'s eyes dilates as their consciousness fades away.",
   ];
 
   const shootSelfDeathFlavorTexts = [
@@ -342,6 +354,9 @@ export async function execute(
     "**BANG!** Silence follows the shot. {user} is gone. {target} remains.",
     "**BANG!** {user} ends their own game. {target} breathes a sigh of relief.",
     "**BANG!** {user} did not awaken a Persona, instead they are dead.",
+    "**BANG!** A tragic end for {user} as {target} gains their freedom, {user} is no more.",
+    "**BANG!** The wall behind {user} is painted in red, {target} wins.",
+    "**BANG!** {target} breathes a sigh of relief as {user} has shot themself.",
   ];
 
   function getFlavorText(template: string[], user: User, target: User): string {
