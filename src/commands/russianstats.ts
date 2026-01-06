@@ -65,7 +65,7 @@ function renderUserStatsEmbed(
   embed.addFields(
     { name: "🧨 **FATE METRICS**", value: "\u200B", inline: false },
     {
-      name: "🩸 Self-inflicted Deaths",
+      name: "🩸 Suicide",
       value: stats.shotSelfDeaths.toString(),
       inline: true,
     },
