@@ -20,6 +20,7 @@ import {
   handleReactionRemove,
 } from "./utils/eventHandlers.js";
 import { LockManager } from "./utils/lockManager.js";
+import { InterServerChat } from "./utils/interServerChat.js";
 
 class AltershaperBot {
   private client: Client;
@@ -59,6 +60,7 @@ class AltershaperBot {
 
       await this.registerSlashCommands();
       await ReactionRoleHandler.initialize(this.client);
+      InterServerChat.initialize(this.client);
 
       this.resolveReady();
     });
@@ -69,6 +71,9 @@ class AltershaperBot {
     this.client.on("guildMemberAdd", handleMemberJoin);
     this.client.on("messageReactionAdd", handleReactionAdd);
     this.client.on("messageReactionRemove", handleReactionRemove);
+    this.client.on("messageCreate", (message) =>
+      InterServerChat.handleMessage(message),
+    );
   }
 
   private logVisibleChannels(): void {

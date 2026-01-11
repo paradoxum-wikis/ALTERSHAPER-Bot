@@ -30,6 +30,7 @@ import * as asset from "../commands/asset.js";
 import * as reactionrole from "../commands/reactionrole.js";
 import * as russian from "../commands/russian.js";
 import * as russianstats from "../commands/russianstats.js";
+import * as interchat from "../commands/interchat.js";
 
 export interface Command {
   data: any;
@@ -71,6 +72,7 @@ export function loadCommands(): Collection<string, Command> {
     reactionrole,
     russian,
     russianstats,
+    interchat,
   ];
 
   for (const command of commandModules) {

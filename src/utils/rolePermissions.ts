@@ -17,6 +17,7 @@ export const COMMAND_PERMISSIONS: Record<string, PermissionLevel> = {
   removelink: PermissionLevel.ADMIN,
   webhook: PermissionLevel.ADMIN,
   reactionrole: PermissionLevel.ADMIN,
+  interchat: PermissionLevel.ADMIN,
 
   // Moderator
   kick: PermissionLevel.MODERATOR,

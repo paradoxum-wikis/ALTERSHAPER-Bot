@@ -27,6 +27,11 @@ const commands: CommandInfo[] = [
     category: "admin",
   },
   {
+    name: "/interchat >subcommand",
+    value: "Create a chatroom across servers",
+    category: "admin",
+  },
+  {
     name: "/removesin -entryid",
     value: "Absolve a soul and undo its punishment",
     category: "admin",
