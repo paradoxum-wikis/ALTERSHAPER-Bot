@@ -161,8 +161,8 @@ export class InterServerChat {
             else refContent = "*[Unknown]*";
           }
 
-          if (refContent.length > 60) {
-            refContent = refContent.substring(0, 60) + "...";
+          if (refContent.length > 360) {
+            refContent = refContent.substring(0, 360) + "...";
           }
           refContent = refContent.replace(/\n/g, " ");
 
