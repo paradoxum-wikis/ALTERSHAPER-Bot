@@ -293,6 +293,7 @@ export async function execute(
   let gameOver = false;
   let turnTimer: NodeJS.Timeout;
   let turns = 0;
+  let isBonusTurn = false;
 
   const shootFlavorTexts = [
     "{user} pulls the trigger... *Click*. Nothing happens.",
@@ -370,6 +371,7 @@ export async function execute(
     message: string,
     filter: "none" | "bw" | "red" = "none",
     disableButtons = false,
+    disableShootSelf = false,
     imageTarget?: User,
   ) => {
     const target = imageTarget || opponentUser;
@@ -404,7 +406,7 @@ export async function execute(
       .setCustomId("shoot_self")
       .setLabel("🎲 Shoot Yourself")
       .setStyle(ButtonStyle.Secondary)
-      .setDisabled(disableButtons);
+      .setDisabled(disableButtons || disableShootSelf);
 
     const skipButton = new ButtonBuilder()
       .setCustomId("skip")
@@ -431,6 +433,7 @@ export async function execute(
     turnTimer = setTimeout(async () => {
       const message = `**⏰ Time's up!** ${currentTurnUser} took too long. The gun passes to ${opponentUser}.`;
       [currentTurnUser, opponentUser] = [opponentUser, currentTurnUser];
+      isBonusTurn = false;
       await updateGame(message, "none", false);
       startTurnTimer();
     }, 30000);
@@ -478,6 +481,7 @@ export async function execute(
         );
         currentSlot++;
         [currentTurnUser, opponentUser] = [opponentUser, currentTurnUser];
+        isBonusTurn = false;
       }
     } else if (action === "shoot_self") {
       if (currentSlot === bulletSlot) {
@@ -495,11 +499,13 @@ export async function execute(
           opponentUser,
         );
         currentSlot++;
-        [currentTurnUser, opponentUser] = [opponentUser, currentTurnUser];
+        isBonusTurn = true;
+        message += `\n\n**🍀 ${currentTurnUser} gains a bonus turn for surviving a self-shot! However, they cannot do it again consecutively.**`;
       }
     } else if (action === "skip") {
       message = getFlavorText(skipFlavorTexts, currentTurnUser, opponentUser);
       [currentTurnUser, opponentUser] = [opponentUser, currentTurnUser];
+      isBonusTurn = false;
     }
 
     if (gameOver) {
@@ -521,7 +527,7 @@ export async function execute(
       await updateGame(message, filter, true);
       collector.stop("game_over");
     } else {
-      await updateGame(message, "none", false);
+      await updateGame(message, "none", false, isBonusTurn);
       startTurnTimer();
     }
   });
