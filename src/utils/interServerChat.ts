@@ -146,8 +146,30 @@ export class InterServerChat {
       );
 
       let content = message.content;
-      if (message.reference) {
-        content = `> *(Replying to a message)*\n${content}`;
+      if (message.reference && message.reference.messageId) {
+        try {
+          const refMessage = await message.channel.messages.fetch(
+            message.reference.messageId,
+          );
+          const refAuthor =
+            refMessage.member?.displayName || refMessage.author.username;
+          let refContent = refMessage.content;
+
+          if (!refContent) {
+            if (refMessage.attachments.size > 0) refContent = "*[Attachment]*";
+            else if (refMessage.embeds.length > 0) refContent = "*[Embed]*";
+            else refContent = "*[Unknown]*";
+          }
+
+          if (refContent.length > 60) {
+            refContent = refContent.substring(0, 60) + "...";
+          }
+          refContent = refContent.replace(/\n/g, " ");
+
+          content = `> ↩️ **${refAuthor}:** ${refContent}\n${content}`;
+        } catch (error) {
+          content = `> *(Replying to a message)*\n${content}`;
+        }
       }
 
       const displayName =
