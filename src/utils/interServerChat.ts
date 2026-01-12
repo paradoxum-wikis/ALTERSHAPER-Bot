@@ -151,9 +151,18 @@ export class InterServerChat {
           const refMessage = await message.channel.messages.fetch(
             message.reference.messageId,
           );
+
           const refAuthor =
             refMessage.member?.displayName || refMessage.author.username;
+
           let refContent = refMessage.content;
+          if (refContent) {
+            const lines = refContent.split("\n");
+            const firstLine = lines[0] ?? "";
+            if (firstLine.startsWith("> ↩️ ")) {
+              refContent = lines.slice(1).join("\n").trimStart();
+            }
+          }
 
           if (!refContent) {
             if (refMessage.attachments.size > 0) refContent = "*[Attachment]*";
