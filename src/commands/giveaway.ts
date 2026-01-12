@@ -21,11 +21,27 @@ export const data = new SlashCommandBuilder()
   )
   .addIntegerOption((option) =>
     option
+      .setName("days")
+      .setDescription("Duration of the gathering in days")
+      .setRequired(false)
+      .setMinValue(0)
+      .setMaxValue(7),
+  )
+  .addIntegerOption((option) =>
+    option
+      .setName("hours")
+      .setDescription("Duration of the gathering in hours")
+      .setRequired(false)
+      .setMinValue(0)
+      .setMaxValue(168),
+  )
+  .addIntegerOption((option) =>
+    option
       .setName("minutes")
       .setDescription("Duration of the gathering in minutes")
-      .setRequired(true)
-      .setMinValue(1)
-      .setMaxValue(1440),
+      .setRequired(false)
+      .setMinValue(0)
+      .setMaxValue(10080),
   )
   .addIntegerOption((option) =>
     option
@@ -41,9 +57,24 @@ export async function execute(
   executor: GuildMember,
 ): Promise<void> {
   const prize = interaction.options.getString("prize")!;
-  const durationMinutes = interaction.options.getInteger("minutes")!;
+
+  const days = interaction.options.getInteger("days") ?? 0;
+  const hours = interaction.options.getInteger("hours") ?? 0;
+  const minutes = interaction.options.getInteger("minutes") ?? 0;
+
+  const totalMinutes = days * 24 * 60 + hours * 60 + minutes;
+
+  if (totalMinutes < 1) {
+    await interaction.reply({
+      content:
+        "**THOU MUST DECLARE A DURATION!** Provide at least 1 minute (days/hours/minutes).",
+      flags: MessageFlags.Ephemeral,
+    });
+    return;
+  }
+
   const winnerCount = interaction.options.getInteger("winners") || 1;
-  const durationMs = durationMinutes * 60 * 1000;
+  const durationMs = totalMinutes * 60 * 1000;
   const endTime = new Date(Date.now() + durationMs);
 
   const joinButton = new ButtonBuilder()

@@ -18,11 +18,27 @@ export const data = new SlashCommandBuilder()
   )
   .addIntegerOption((option) =>
     option
+      .setName("days")
+      .setDescription("Days of silence")
+      .setRequired(false)
+      .setMinValue(0)
+      .setMaxValue(28),
+  )
+  .addIntegerOption((option) =>
+    option
+      .setName("hours")
+      .setDescription("Hours of silence")
+      .setRequired(false)
+      .setMinValue(0)
+      .setMaxValue(23),
+  )
+  .addIntegerOption((option) =>
+    option
       .setName("minutes")
-      .setDescription("Duration of silence in minutes")
-      .setRequired(true)
-      .setMinValue(1)
-      .setMaxValue(40320),
+      .setDescription("Minutes of silence")
+      .setRequired(false)
+      .setMinValue(0)
+      .setMaxValue(59),
   )
   .addStringOption((option) =>
     option
@@ -36,7 +52,12 @@ export async function execute(
   executor: GuildMember,
 ): Promise<void> {
   const targetUser = interaction.options.getUser("user")!;
-  const duration = interaction.options.getInteger("minutes")!;
+  const days = interaction.options.getInteger("days") ?? 0;
+  const hours = interaction.options.getInteger("hours") ?? 0;
+  const minutes = interaction.options.getInteger("minutes") ?? 0;
+
+  const totalMinutes = days * 24 * 60 + hours * 60 + minutes;
+
   const reason =
     interaction.options.getString("reason") || "Violation of sacred Alteruism";
 
@@ -58,7 +79,25 @@ export async function execute(
   }
 
   try {
-    await targetMember.timeout(duration * 60 * 1000, reason);
+    if (totalMinutes <= 0) {
+      await interaction.reply({
+        content:
+          "**THOU MUST DECREE A DURATION! Provide at least 1 minute (days/hours/minutes).**",
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
+
+    if (totalMinutes > 40320) {
+      await interaction.reply({
+        content:
+          "**THE DECREE EXCEEDS THE DIVINE LIMIT!** Maximum silence is **40320 minutes (28 days)**.",
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
+
+    await targetMember.timeout(totalMinutes * 60 * 1000, reason);
 
     const entryId = await ModerationLogger.addEntry({
       type: "timeout",
@@ -68,8 +107,16 @@ export async function execute(
       moderatorTag: executor.user.tag,
       reason: reason,
       guildId: interaction.guild.id,
-      duration: duration,
+      duration: totalMinutes,
     });
+
+    const durationParts: string[] = [];
+    if (days) durationParts.push(`${days} day${days === 1 ? "" : "s"}`);
+    if (hours) durationParts.push(`${hours} hour${hours === 1 ? "" : "s"}`);
+    if (minutes)
+      durationParts.push(`${minutes} minute${minutes === 1 ? "" : "s"}`);
+    const durationDisplay =
+      durationParts.join(", ") || `${totalMinutes} minutes`;
 
     const embed = new EmbedBuilder()
       .setColor("#FFD700")
@@ -86,7 +133,7 @@ export async function execute(
         { name: "ACTION ID", value: `${entryId}`, inline: true },
         {
           name: "DURATION OF REFLECTION",
-          value: `${duration} minutes`,
+          value: `${durationDisplay} (${totalMinutes} minutes)`,
           inline: true,
         },
         { name: "REASON FOR SILENCE", value: reason, inline: false },
