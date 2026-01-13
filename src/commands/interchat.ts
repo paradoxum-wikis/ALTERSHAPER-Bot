@@ -177,7 +177,7 @@ export async function execute(
       const partnerName = partnerGuild ? partnerGuild.name : partnerGuildId;
 
       await interaction.reply({
-        content: `✅ This channel is linked to **Channel <#${partnerChannelId}>** in **${partnerName}**.`,
+        content: `🤑 This channel is linked to **<#${partnerChannelId}>** in **${partnerName}**.`,
         ephemeral: true,
       });
     } else {
