@@ -27,7 +27,7 @@ export class ConsoleHandler {
   }
 
   public listCommands(): void {
-    console.log("⚙️ Available console commands:");
+    console.log("Available console commands:");
     for (const [name, { description, isAlias }] of this.commands.entries()) {
       if (!isAlias) {
         console.log(`  • ${name} — ${description}`);
@@ -54,7 +54,7 @@ export class ConsoleHandler {
       const command = this.commands.get(trimmed);
       if (!command) {
         console.log(
-          `❓ Unknown command "${trimmed}". Type "help" to list all options.\n`,
+          `Unknown command "${trimmed}". Type "help" to list all options.\n`,
         );
         this.prompt();
         return;
@@ -72,12 +72,10 @@ export class ConsoleHandler {
     });
 
     this.rl.on("close", () => {
-      console.log("🔚 Console input closed.");
+      console.log("Console input closed.");
     });
 
-    console.log(
-      '🛠️  Console command handler ready. Type "help" for options.\n',
-    ); // intentional dup space
+    console.log(' Console command handler ready. Type "help" for options.\n'); // intentional dup space
     this.prompt();
   }
 

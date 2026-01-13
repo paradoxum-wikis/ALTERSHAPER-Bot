@@ -43,7 +43,10 @@ export async function execute(
   try {
     await interaction.deferReply();
 
-    console.log("📊 Wiki roles sync requested by", interaction.user.tag);
+    console.log(
+      "[SYNCROLES] Wiki roles sync requested by",
+      interaction.user.tag,
+    );
 
     const result = await TopContributorsManager.syncAllTopContributorRoles(
       interaction.guild,

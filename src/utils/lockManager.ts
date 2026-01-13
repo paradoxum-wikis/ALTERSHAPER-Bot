@@ -83,7 +83,7 @@ export class LockManager {
       for (const [gameType, lock] of guildLocks.entries()) {
         if (now - lock.startTime > this.TIMEOUT) {
           console.log(
-            `[LOCK_MANAGER] Cleaning up timed out ${gameType} in guild ${guildId}`,
+            `[LOCKMANAGER] Cleaning up timed out ${gameType} in guild ${guildId}`,
           );
           guildLocks.delete(gameType);
         }

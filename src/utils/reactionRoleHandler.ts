@@ -110,13 +110,13 @@ export class ReactionRoleHandler {
         if (kind === "add") {
           await member.roles.add(rule.roleId);
           console.log(
-            `✅ ROLE GRANTED TO ${user.tag} (${user.id}) via reaction role rule (roleId=${rule.roleId})`,
+            `[REACTIONROLEHANDLER] ROLE GRANTED TO ${user.tag} (${user.id}) via reaction role rule (roleId=${rule.roleId})`,
           );
         } else {
           if (rule.removeOnUnreact === false) continue;
           await member.roles.remove(rule.roleId);
           console.log(
-            `❌ ROLE REMOVED FROM ${user.tag} (${user.id}) via reaction role rule (roleId=${rule.roleId})`,
+            `[REACTIONROLEHANDLER] ROLE REMOVED FROM ${user.tag} (${user.id}) via reaction role rule (roleId=${rule.roleId})`,
           );
         }
       } catch (error) {

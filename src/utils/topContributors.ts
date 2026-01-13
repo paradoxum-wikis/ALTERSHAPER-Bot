@@ -59,7 +59,7 @@ export class TopContributorsManager {
       const response = await fetch(apiUrl);
       if (!response.ok) {
         console.log(
-          `Failed to fetch directory contents for year ${currentYear}: ${response.status}`,
+          `[TOPCONTRIBUTORS] Failed to fetch directory contents for year ${currentYear}: ${response.status}`,
         );
         return null;
       }
@@ -77,7 +77,9 @@ export class TopContributorsManager {
         .sort((a, b) => b.name.localeCompare(a.name));
 
       if (recapFiles.length === 0) {
-        console.log(`No recap files found for year ${currentYear}`);
+        console.log(
+          `[TOPCONTRIBUTORS] No recap files found for year ${currentYear}`,
+        );
         return null;
       }
 
@@ -97,7 +99,7 @@ export class TopContributorsManager {
     const newestFile = await this.getNewestRecapFile();
 
     if (!newestFile) {
-      console.log(`No recap files found for ${currentYear}`);
+      console.log(`[TOPCONTRIBUTORS] No recap files found for ${currentYear}`);
       return [];
     }
 
@@ -107,14 +109,14 @@ export class TopContributorsManager {
       const response = await fetch(url);
       if (!response.ok) {
         console.log(
-          `Failed to fetch top contributors data from ${newestFile}: ${response.status}`,
+          `[TOPCONTRIBUTORS] Failed to fetch top contributors data from ${newestFile}: ${response.status}`,
         );
         return [];
       }
 
       const data = (await response.json()) as RecapData;
       console.log(
-        `Successfully loaded top contributors data from ${newestFile}`,
+        `[TOPCONTRIBUTORS] Successfully loaded top contributors data from ${newestFile}`,
       );
       return data.contributors || [];
     } catch (error) {

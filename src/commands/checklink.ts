@@ -84,7 +84,7 @@ export async function execute(
     }
 
     console.log(
-      `[CHECKLINK DEBUG] Checking user: ${targetUser.tag} linked to: ${existingLink.fandomUsername}`,
+      `[CHECKLINK] Checking user: ${targetUser.tag} linked to: ${existingLink.fandomUsername}`,
     );
 
     const userQueryUrl = `https://alter-ego.fandom.com/api.php?action=query&format=json&list=users&ususers=${encodeURIComponent(
@@ -119,9 +119,9 @@ export async function execute(
     }
 
     console.log(
-      `[CHECKLINK DEBUG] Fandom groups found: ${JSON.stringify(fandomGroups)}`,
+      `[CHECKLINK] Fandom groups found: ${JSON.stringify(fandomGroups)}`,
     );
-    console.log(`[CHECKLINK DEBUG] Fandom data status: ${fandomDataStatus}`);
+    console.log(`[CHECKLINK] Fandom data status: ${fandomDataStatus}`);
 
     let rolesSynced = false;
     let grantedRoleNames: string[] = [];
@@ -130,7 +130,7 @@ export async function execute(
 
     if (fandomDataStatus === "Active") {
       console.log(
-        `[CHECKLINK DEBUG] Starting role sync for ${existingLink.fandomUsername}`,
+        `[CHECKLINK] Starting role sync for ${existingLink.fandomUsername}`,
       );
 
       const roleResult = await FandomRoleManager.manageFandomRoles(
@@ -143,10 +143,10 @@ export async function execute(
       failedRoleNames = roleResult.failedRoleNames;
 
       console.log(
-        `[CHECKLINK DEBUG] Fandom roles granted: ${JSON.stringify(grantedRoleNames)}`,
+        `[CHECKLINK] Fandom roles granted: ${JSON.stringify(grantedRoleNames)}`,
       );
       console.log(
-        `[CHECKLINK DEBUG] Fandom roles failed: ${JSON.stringify(failedRoleNames)}`,
+        `[CHECKLINK] Fandom roles failed: ${JSON.stringify(failedRoleNames)}`,
       );
 
       topContributorResult =
@@ -156,7 +156,7 @@ export async function execute(
         );
 
       console.log(
-        `[CHECKLINK DEBUG] Top contributor result: ${JSON.stringify(topContributorResult)}`,
+        `[CHECKLINK] Top contributor result: ${JSON.stringify(topContributorResult)}`,
       );
 
       rolesSynced = true;
@@ -191,7 +191,7 @@ export async function execute(
     if (rolesSynced) {
       let allGrantedRoles = [...grantedRoleNames];
       console.log(
-        `[CHECKLINK DEBUG] Initial allGrantedRoles: ${JSON.stringify(
+        `[CHECKLINK] Initial allGrantedRoles: ${JSON.stringify(
           allGrantedRoles,
         )}`,
       );
@@ -201,15 +201,13 @@ export async function execute(
           TOP_CONTRIBUTORS_ROLE_ID,
         );
         console.log(
-          `[CHECKLINK DEBUG] Top contributor role check - granted: ${topContributorResult.roleGranted}, rank: ${topContributorResult.rank}, found role: ${topRole?.name} (ID: ${TOP_CONTRIBUTORS_ROLE_ID})`,
+          `[CHECKLINK] Top contributor role check - granted: ${topContributorResult.roleGranted}, rank: ${topContributorResult.rank}, found role: ${topRole?.name} (ID: ${TOP_CONTRIBUTORS_ROLE_ID})`,
         );
         if (topRole) allGrantedRoles.push(topRole.name);
       }
 
       console.log(
-        `[CHECKLINK DEBUG] Final allGrantedRoles: ${JSON.stringify(
-          allGrantedRoles,
-        )}`,
+        `[CHECKLINK] Final allGrantedRoles: ${JSON.stringify(allGrantedRoles)}`,
       );
 
       const roleMentions = FandomRoleManager.createRoleMentions(
@@ -217,7 +215,7 @@ export async function execute(
         interaction.guild,
       );
 
-      console.log(`[CHECKLINK DEBUG] Role mentions generated: ${roleMentions}`);
+      console.log(`[CHECKLINK] Role mentions generated: ${roleMentions}`);
 
       embed.addFields({ name: "ROLES SYNCHRONIZED", value: roleMentions });
 

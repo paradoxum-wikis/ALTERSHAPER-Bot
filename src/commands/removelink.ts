@@ -169,7 +169,7 @@ export async function execute(
             `**THY LINK HATH BEEN SEVERED!**\n\nThy connection to the Fandom alter "${existingLink.fandomUsername}" has been severed by **${executor.user.tag}**.\n\nTo restore thy link, thou must use the /link command again and verify thy identity anew.`,
           );
         } catch (dmError) {
-          console.log(`Could not DM ${targetUser.tag}:`, dmError);
+          console.log(`[REMOVELINK] Could not DM ${targetUser.tag}:`, dmError);
         }
       } else if (confirmation.customId === "cancel_severance") {
         await confirmation.update({

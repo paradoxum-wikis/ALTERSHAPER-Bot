@@ -51,9 +51,7 @@ class AltershaperBot {
 
   private setupEventListeners(): void {
     this.client.once("clientReady", async () => {
-      console.log(
-        `✅ Altershaper bot hath awakened as ${this.client.user?.tag}`,
-      );
+      console.log(`Altershaper bot hath awakened as ${this.client.user?.tag}`);
       this.client.user?.setActivity("Alter Egoists", { type: 3 });
 
       this.logVisibleChannels();
@@ -77,11 +75,11 @@ class AltershaperBot {
   }
 
   private logVisibleChannels(): void {
-    console.log("🔍 Permissions:");
+    console.log("Permissions:");
     console.log("================================");
 
     this.client.guilds.cache.forEach((guild) => {
-      console.log(`📁 Server: ${guild.name} (ID: ${guild.id})`);
+      console.log(`Server: ${guild.name} (ID: ${guild.id})`);
 
       guild.channels.cache.forEach((channel) => {
         let channelType = "Unknown";
@@ -136,9 +134,9 @@ class AltershaperBot {
             break;
         }
 
-        const readStatus = canRead ? "✅ CAN READ" : "❌ CANNOT READ";
+        const readStatus = canRead ? "CAN READ" : "CANNOT READ";
         console.log(
-          `  📝 ${channelType}: #${channel.name} (ID: ${channel.id}) - ${readStatus}`,
+          `  ${channelType}: #${channel.name} (ID: ${channel.id}) - ${readStatus}`,
         );
       });
 
@@ -155,15 +153,15 @@ class AltershaperBot {
     const rest = new REST({ version: "10" }).setToken(this.BOT_TOKEN!);
 
     try {
-      console.log("🔄 Registering divine slash commands...");
+      console.log("Registering divine slash commands...");
 
       await rest.put(Routes.applicationCommands(this.client.user!.id), {
         body: commandData,
       });
 
-      console.log("✅ Divine slash commands registered successfully!");
+      console.log("Divine slash commands registered successfully!");
     } catch (error) {
-      console.error("❌ Failed to register slash commands:", error);
+      console.error("Failed to register slash commands:", error);
     }
   }
 
@@ -186,30 +184,30 @@ class AltershaperBot {
 
     // Graceful shutdowns
     process.on("SIGINT", () => {
-      console.log("🛑 Shutting down gracefully...");
+      console.log("Shutting down gracefully...");
       this.client.destroy();
       process.exit(0);
     });
 
     process.on("SIGTERM", () => {
-      console.log("🛑 Shutting down gracefully...");
+      console.log("Shutting down gracefully...");
       this.client.destroy();
       process.exit(0);
     });
   }
 
   public async reloadSlashCommands(): Promise<void> {
-    console.log("🔄 Reloading slash commands...");
+    console.log("Reloading slash commands...");
     this.commands = loadCommands();
     await this.registerSlashCommands();
-    console.log("✅ Slash commands reloaded successfully!");
+    console.log("Slash commands reloaded successfully!");
   }
 
   public logStatus(): void {
     const readyAt = this.client.readyAt
       ? `<t:${Math.floor(this.client.readyAt.getTime() / 1000)}:R>`
       : "Not ready";
-    console.log("📊 Altershaper Status:");
+    console.log("Altershaper Status:");
     console.log(`  • Ready at: ${readyAt}`);
     console.log(`  • Guilds: ${this.client.guilds.cache.size}`);
     console.log(`  • Users cached: ${this.client.users.cache.size}`);
@@ -217,13 +215,13 @@ class AltershaperBot {
   }
 
   public async shutdown(exitCode = 0): Promise<void> {
-    console.log("🛑 Shutting down Altershaper bot...");
+    console.log("Shutting down Altershaper bot...");
     await this.client.destroy();
     process.exit(exitCode);
   }
 
   public async restart(): Promise<void> {
-    console.log("♻️  Restarting Altershaper bot internals..."); // intentional space
+    console.log(" Restarting Altershaper bot internals..."); // intentional space
 
     try {
       await this.client.destroy();
@@ -247,16 +245,16 @@ class AltershaperBot {
       await this.client.login(this.BOT_TOKEN!);
       await this.waitUntilReady();
 
-      console.log("✅ Altershaper bot internals restarted successfully!");
+      console.log("Altershaper bot internals restarted successfully!");
     } catch (error) {
-      console.error("❌ Failed to restart bot internals:", error);
-      console.log("❌ Manual restart required. Bot will shut down.");
+      console.error("Failed to restart bot internals:", error);
+      console.log("Manual restart required. Bot will shut down.");
       await this.shutdown(1);
     }
   }
 
   public clearCache(): void {
-    console.log("🧹 Clearing Discord.js caches...");
+    console.log("Clearing Discord.js caches...");
     const beforeUsers = this.client.users.cache.size;
     const beforeChannels = this.client.channels.cache.size;
 
@@ -269,16 +267,16 @@ class AltershaperBot {
     });
 
     console.log(
-      `✅ Cleared ${beforeUsers} users and ${beforeChannels} channels from cache\n`,
+      `Cleared ${beforeUsers} users and ${beforeChannels} channels from cache\n`,
     );
   }
 
   public listGuilds(): void {
-    console.log("🏰 Connected Guilds:");
+    console.log("Connected Guilds:");
     console.log("================================");
 
     this.client.guilds.cache.forEach((guild) => {
-      console.log(`📁 ${guild.name}`);
+      console.log(`${guild.name}`);
       console.log(`   • ID: ${guild.id}`);
       console.log(`   • Members: ${guild.memberCount}`);
       console.log(`   • Owner: ${guild.ownerId}`);
@@ -291,7 +289,7 @@ class AltershaperBot {
   }
 
   public listLocks(): void {
-    console.log("🔒 Active Battle Locks:");
+    console.log("Active Battle Locks:");
     console.log("================================");
 
     const allLocks = LockManager.getAllLocks();
@@ -306,7 +304,7 @@ class AltershaperBot {
       const guild = this.client.guilds.cache.get(guildId);
       const guildName = guild ? guild.name : `Unknown (${guildId})`;
 
-      console.log(`📁 ${guildName}`);
+      console.log(`${guildName}`);
       console.log(`   • Guild ID: ${guildId}`);
       console.log(`   • Locked Users: ${userIds.size}`);
 

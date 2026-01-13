@@ -25,7 +25,9 @@ export class InterServerChat {
   public static initialize(client: Client): void {
     this.client = client;
     this.loadLinks();
-    console.log(`✅ InterServerChat loaded with ${this.links.length} links.`);
+    console.log(
+      `[INTERSERVERCHAT] InterServerChat loaded with ${this.links.length} links.`,
+    );
   }
 
   private static loadLinks(): void {

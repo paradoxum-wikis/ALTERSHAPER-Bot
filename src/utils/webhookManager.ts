@@ -48,7 +48,7 @@ export class WebhookManager {
         this.webhookData.nextHeraldNumber = 1;
       }
     } catch (error) {
-      console.log("Initializing new webhook data file");
+      console.log("[WEBHOOKMANAGER] Initializing new webhook data file");
       this.webhookData = { webhooks: [], nextHeraldNumber: 1 };
     }
   }
