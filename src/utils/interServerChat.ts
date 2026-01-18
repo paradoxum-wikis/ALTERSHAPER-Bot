@@ -179,7 +179,7 @@ export class InterServerChat {
 
           content = `> ↩️ **${refAuthor}:** ${refContent}\n${content}`;
         } catch (error) {
-          content = `> *(Replying to a message)*\n${content}`;
+          content = `> *[Forwarded message])*\n${content}`;
         }
       }
 
@@ -187,7 +187,7 @@ export class InterServerChat {
         message.member?.displayName || message.author.username;
 
       await webhook.send({
-        content: content || (files.length > 0 ? "" : "*[No content]*"),
+        content: content || (files.length > 0 ? "" : "*[Sticker]*"),
         username: `${displayName} • ${message.guild.name}`,
         avatarURL: message.author.displayAvatarURL(),
         files: files,

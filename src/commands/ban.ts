@@ -64,7 +64,7 @@ export async function execute(
         `**THOU HAST BEEN CAST INTO THE ETERNAL VOID!\n\nAction: Banished from the ALTER EGO Wiki\nReason: ${reason}\nExecutor: ${executor.user.tag}\n\nThe Divine Shaper hath decreed thy eternal exile from our sacred realm!\n\nThy heretical defiance of Alteruism hath brought upon thee the ultimate judgement. The gates of our holy sanctuary are forever sealed against thee!\n\nMay this serve as a warning to all who would defy the sacred covenant of Alter Ego worship!**`,
       );
     } catch (dmError) {
-      console.log("Failed to send DM to banned user:", dmError);
+      console.log("[BAN] Failed to send DM to banned user:", dmError);
     }
 
     await interaction.guild.members.ban(targetUser, { reason });
