@@ -148,7 +148,32 @@ export class InterServerChat {
       );
 
       let content = message.content;
-      if (message.reference && message.reference.messageId) {
+
+      const messageSnapshots = message.messageSnapshots;
+      const isForwarded = messageSnapshots && messageSnapshots.size > 0;
+
+      if (isForwarded) {
+        const snapshot = messageSnapshots.first();
+        const forwardedContent = snapshot?.content || "";
+
+        let forwardPreview = forwardedContent;
+        if (!forwardPreview) {
+          if (snapshot?.attachments && snapshot.attachments.size > 0)
+            forwardPreview = "*[Attachment]*";
+          else if (snapshot?.embeds && snapshot.embeds.length > 0)
+            forwardPreview = "*[Embed]*";
+          else if (snapshot?.stickers && snapshot.stickers.size > 0)
+            forwardPreview = "*[Sticker]*";
+          else forwardPreview = "*[Unknown]*";
+        }
+
+        if (forwardPreview.length > 360) {
+          forwardPreview = forwardPreview.substring(0, 360) + "...";
+        }
+        forwardPreview = forwardPreview.replace(/\n/g, " ");
+
+        content = `> 📨 **Forwarded message:** ${forwardPreview}\n${content}`;
+      } else if (message.reference && message.reference.messageId) {
         try {
           const refMessage = await message.channel.messages.fetch(
             message.reference.messageId,
@@ -163,12 +188,15 @@ export class InterServerChat {
             const firstLine = lines[0] ?? "";
             if (firstLine.startsWith("> ↩️ ")) {
               refContent = lines.slice(1).join("\n").trimStart();
+            } else if (firstLine.startsWith("> 📨 ")) {
+              refContent = lines.slice(1).join("\n").trimStart();
             }
           }
 
           if (!refContent) {
             if (refMessage.attachments.size > 0) refContent = "*[Attachment]*";
             else if (refMessage.embeds.length > 0) refContent = "*[Embed]*";
+            else if (refMessage.stickers.size > 0) refContent = "*[Sticker]*";
             else refContent = "*[Unknown]*";
           }
 
@@ -179,15 +207,30 @@ export class InterServerChat {
 
           content = `> ↩️ **${refAuthor}:** ${refContent}\n${content}`;
         } catch (error) {
-          content = `> *[Forwarded message])*\n${content}`;
+          content = `> ↩️ *[Reply to unknown message]*\n${content}`;
         }
       }
 
       const displayName =
         message.member?.displayName || message.author.username;
 
+      let stickerText = "";
+      if (message.stickers.size > 0) {
+        const stickerNames = message.stickers.map((s) => s.name).join(", ");
+        stickerText = `*[Sticker: ${stickerNames}]*`;
+      }
+
+      let finalContent = content;
+      if (!content && files.length === 0 && stickerText) {
+        finalContent = stickerText;
+      } else if (stickerText) {
+        finalContent = content ? `${content}\n${stickerText}` : stickerText;
+      } else if (!content && files.length === 0) {
+        finalContent = "*[Empty message]*";
+      }
+
       await webhook.send({
-        content: content || (files.length > 0 ? "" : "*[Sticker]*"),
+        content: finalContent || "",
         username: `${displayName} • ${message.guild.name}`,
         avatarURL: message.author.displayAvatarURL(),
         files: files,
