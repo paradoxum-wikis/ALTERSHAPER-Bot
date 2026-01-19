@@ -5,7 +5,7 @@
   "main": "dist/index.js",
   "type": "module",
   "scripts": {
-    "build": "tsc && cp src/webhook.png src/ship.png src/ship2.png src/deathbattle.png src/deathbattle2.png src/deathbattle3.png dist/",
+    "build": "tsc && cp src/webhook.png src/ship.png src/ship2.png src/deathbattle.png src/deathbattle2.png src/deathbattle3.png src/russian.png dist/",
     "start": "node dist/index.js",
     "dev": "tsx --require dotenv/config src/index.ts",
     "watch": "tsc -w",
