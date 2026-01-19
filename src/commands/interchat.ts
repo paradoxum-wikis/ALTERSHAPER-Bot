@@ -28,7 +28,7 @@ setInterval(
 
 export const data = new SlashCommandBuilder()
   .setName("interchat")
-  .setDescription("Manage inter-server chat connections")
+  .setDescription("Manage interserver chat connections")
   .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels)
   .addSubcommand((subcommand) =>
     subcommand
@@ -49,7 +49,7 @@ export const data = new SlashCommandBuilder()
   .addSubcommand((subcommand) =>
     subcommand
       .setName("leave")
-      .setDescription("Disconnect this channel from inter-server chat"),
+      .setDescription("Disconnect this channel from interserver chat"),
   )
   .addSubcommand((subcommand) =>
     subcommand.setName("status").setDescription("Check connection status"),
@@ -70,7 +70,7 @@ export async function execute(
 
   if (interaction.channel.type !== ChannelType.GuildText) {
     await interaction.reply({
-      content: "Inter-server chat only supports text channels.",
+      content: "Interserver chat only supports text channels.",
       ephemeral: true,
     });
     return;
@@ -151,7 +151,7 @@ export async function execute(
 
     if (success) {
       await interaction.reply({
-        content: "✅ Inter-server link removed for this channel.",
+        content: "✅ Interserver link removed for this channel.",
       });
     } else {
       await interaction.reply({

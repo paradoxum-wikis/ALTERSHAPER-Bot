@@ -54,7 +54,7 @@ export class InterServerChat {
         pools: parsed.pools || [],
       };
     } catch (error) {
-      console.error("❌ Failed to load inter-server data:", error);
+      console.error("❌ Failed to load interserver data:", error);
       this.data = { pools: [] };
     }
   }
@@ -67,7 +67,7 @@ export class InterServerChat {
       }
       fs.writeFileSync(DATA_PATH, JSON.stringify(this.data, null, 2));
     } catch (error) {
-      console.error("❌ Failed to save inter-server data:", error);
+      console.error("❌ Failed to save interserver data:", error);
     }
   }
 
