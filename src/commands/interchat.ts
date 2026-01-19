@@ -6,53 +6,84 @@ import {
   ChannelType,
 } from "discord.js";
 import { InterServerChat } from "../utils/interServerChat.js";
-import crypto from "crypto";
-
-const pendingLinks = new Map<
-  string,
-  { guildId: string; channelId: string; createdAt: number }
->();
-
-setInterval(
-  () => {
-    const now = Date.now();
-    for (const [token, data] of pendingLinks.entries()) {
-      if (now - data.createdAt > 3600000) {
-        // 1 hour
-        pendingLinks.delete(token);
-      }
-    }
-  },
-  1000 * 60 * 60,
-);
 
 export const data = new SlashCommandBuilder()
   .setName("interchat")
-  .setDescription("Manage interserver chat connections")
+  .setDescription("Manage interserver chat pools")
   .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels)
   .addSubcommand((subcommand) =>
     subcommand
       .setName("create")
-      .setDescription("Generate a connection token for this channel"),
+      .setDescription("Create a new chat pool")
+      .addStringOption((option) =>
+        option
+          .setName("name")
+          .setDescription("Name for the chat pool")
+          .setRequired(true),
+      ),
   )
   .addSubcommand((subcommand) =>
     subcommand
       .setName("join")
-      .setDescription("Join a connection using a token")
+      .setDescription("Join this channel to a chat pool")
       .addStringOption((option) =>
         option
-          .setName("token")
-          .setDescription("The connection token generated in the other server")
+          .setName("pool")
+          .setDescription("Name or ID of the pool to join")
           .setRequired(true),
       ),
   )
   .addSubcommand((subcommand) =>
     subcommand
       .setName("leave")
-      .setDescription("Disconnect this channel from interserver chat"),
+      .setDescription("Disconnect this channel from its chat pool"),
   )
   .addSubcommand((subcommand) =>
-    subcommand.setName("status").setDescription("Check connection status"),
+    subcommand.setName("list").setDescription("List all available chat pools"),
+  )
+  .addSubcommand((subcommand) =>
+    subcommand
+      .setName("info")
+      .setDescription("Show information about a pool")
+      .addStringOption((option) =>
+        option
+          .setName("pool")
+          .setDescription("Name or ID of the pool")
+          .setRequired(true),
+      ),
+  )
+  .addSubcommand((subcommand) =>
+    subcommand
+      .setName("rename")
+      .setDescription("Rename a chat pool")
+      .addStringOption((option) =>
+        option
+          .setName("pool")
+          .setDescription("Name or ID of the pool to rename")
+          .setRequired(true),
+      )
+      .addStringOption((option) =>
+        option
+          .setName("newname")
+          .setDescription("New name for the pool")
+          .setRequired(true),
+      ),
+  )
+  .addSubcommand((subcommand) =>
+    subcommand
+      .setName("delete")
+      .setDescription("Delete a chat pool")
+      .addStringOption((option) =>
+        option
+          .setName("pool")
+          .setDescription("Name or ID of the pool to delete")
+          .setRequired(true),
+      ),
+  )
+  .addSubcommand((subcommand) =>
+    subcommand
+      .setName("status")
+      .setDescription("Check this channel's connection status"),
   );
 
 export async function execute(
@@ -77,114 +108,277 @@ export async function execute(
   }
 
   if (subcommand === "create") {
-    const existingLink = InterServerChat.getLinks().find(
-      (l) =>
-        l.channelA === interaction.channelId ||
-        l.channelB === interaction.channelId,
-    );
+    const name = interaction.options.getString("name", true);
 
-    if (existingLink) {
+    const existing = InterServerChat.getPoolByName(name);
+    if (existing) {
       await interaction.reply({
-        content:
-          "❌ This channel is already linked to another channel. Use `/interchat leave` first.",
+        content: `❌ A pool named "**${name}**" already exists.`,
         ephemeral: true,
       });
       return;
     }
 
-    const token = crypto.randomBytes(8).toString("hex");
-    pendingLinks.set(token, {
-      guildId: interaction.guildId!,
-      channelId: interaction.channelId,
-      createdAt: Date.now(),
-    });
+    const poolId = InterServerChat.createPool(name);
 
     const embed = new EmbedBuilder()
-      .setTitle("🔗 Connection Token Generated")
+      .setTitle("✅ Chat Pool Created")
       .setDescription(
-        `Use this token in another server to link the channels:\n\n\`${token}\`\n\n*This token is valid for 1 hour.*`,
+        `Pool "**${name}**" has been created!\n\n` +
+          `**Pool ID:** \`${poolId}\`\n\n` +
+          `Use \`/interchat join pool:${name}\` in other channels to connect them to this pool.`,
       )
       .setColor("#00FF00");
 
-    await interaction.reply({ embeds: [embed], ephemeral: true });
+    await interaction.reply({ embeds: [embed] });
   } else if (subcommand === "join") {
-    const token = interaction.options.getString("token", true);
-    const pending = pendingLinks.get(token);
+    const poolIdentifier = interaction.options.getString("pool", true);
 
-    if (!pending) {
+    let pool = InterServerChat.getPoolByName(poolIdentifier);
+    if (!pool) {
+      pool = InterServerChat.getPool(poolIdentifier);
+    }
+
+    if (!pool) {
       await interaction.reply({
-        content: "❌ Invalid or expired token.",
+        content: `❌ Pool "**${poolIdentifier}**" not found.`,
         ephemeral: true,
       });
       return;
     }
 
-    if (pending.channelId === interaction.channelId) {
-      await interaction.reply({
-        content: "❌ You cannot link a channel to itself.",
-        ephemeral: true,
-      });
-      return;
-    }
-
-    const success = InterServerChat.addLink(
-      pending.guildId,
-      pending.channelId,
-      interaction.guildId!,
+    const success = InterServerChat.addChannelToPool(
+      pool.id,
       interaction.channelId,
+      interaction.guildId!,
     );
 
     if (success) {
-      pendingLinks.delete(token);
-      await interaction.reply({
-        content: `✅ Successfully linked this channel with the remote channel!`,
-      });
+      const embed = new EmbedBuilder()
+        .setTitle("✅ Joined Chat Pool")
+        .setDescription(
+          `This channel has been added to pool "**${pool.name}**".\n\n` +
+            `Messages sent here will now be relayed to **${pool.channels.length} other channel(s)** in the pool.`,
+        )
+        .setColor("#00FF00");
+
+      await interaction.reply({ embeds: [embed] });
     } else {
       await interaction.reply({
         content:
-          "❌ Failed to link channels. One of them might already be linked.",
+          "❌ Failed to join pool. This channel might already be in a pool.",
         ephemeral: true,
       });
     }
   } else if (subcommand === "leave") {
-    const success = InterServerChat.removeLink(interaction.channelId);
+    const pool = InterServerChat.getPoolByChannel(interaction.channelId);
+
+    if (!pool) {
+      await interaction.reply({
+        content: "❌ This channel is not in any chat pool.",
+        ephemeral: true,
+      });
+      return;
+    }
+
+    const success = InterServerChat.removeChannelFromPool(
+      pool.id,
+      interaction.channelId,
+    );
 
     if (success) {
       await interaction.reply({
-        content: "✅ Interserver link removed for this channel.",
+        content: `✅ This channel has been disconnected from pool "**${pool.name}**".`,
       });
     } else {
       await interaction.reply({
-        content: "❌ This channel is not currently linked.",
+        content: "❌ Failed to disconnect channel from pool.",
+        ephemeral: true,
+      });
+    }
+  } else if (subcommand === "list") {
+    const pools = InterServerChat.getPools();
+
+    if (pools.length === 0) {
+      await interaction.reply({
+        content:
+          "ℹ️ No chat pools exist yet. Create one with `/interchat create`.",
+        ephemeral: true,
+      });
+      return;
+    }
+
+    const embed = new EmbedBuilder()
+      .setTitle("📋 Chat Pools")
+      .setDescription(
+        pools
+          .map(
+            (pool) =>
+              `**${pool.name}**\n` +
+              `├ ID: \`${pool.id}\`\n` +
+              `├ Channels: ${pool.channels.length}\n` +
+              `└ Created: <t:${Math.floor(new Date(pool.createdAt).getTime() / 1000)}:R>`,
+          )
+          .join("\n\n"),
+      )
+      .setColor("#0099FF");
+
+    await interaction.reply({ embeds: [embed], ephemeral: true });
+  } else if (subcommand === "info") {
+    const poolIdentifier = interaction.options.getString("pool", true);
+
+    let pool = InterServerChat.getPoolByName(poolIdentifier);
+    if (!pool) {
+      pool = InterServerChat.getPool(poolIdentifier);
+    }
+
+    if (!pool) {
+      await interaction.reply({
+        content: `❌ Pool "**${poolIdentifier}**" not found.`,
+        ephemeral: true,
+      });
+      return;
+    }
+
+    const channelList = await Promise.all(
+      pool.channels.map(async (ch) => {
+        const guild = interaction.client.guilds.cache.get(ch.guildId);
+        const guildName = guild?.name || `Unknown Server (${ch.guildId})`;
+        const channel = guild?.channels.cache.get(ch.channelId);
+        const channelName = channel?.name || `unknown-channel`;
+        return `• #${channelName} (${guildName})`;
+      }),
+    );
+
+    const embed = new EmbedBuilder()
+      .setTitle(`📊 Pool Info: ${pool.name}`)
+      .addFields(
+        { name: "Pool ID", value: `\`${pool.id}\``, inline: false },
+        {
+          name: "Channels",
+          value: pool.channels.length.toString(),
+          inline: true,
+        },
+        {
+          name: "Created",
+          value: `<t:${Math.floor(new Date(pool.createdAt).getTime() / 1000)}:R>`,
+          inline: true,
+        },
+        {
+          name: "Connected Channels",
+          value: channelList.join("\n") || "None",
+          inline: false,
+        },
+      )
+      .setColor("#0099FF");
+
+    await interaction.reply({ embeds: [embed], ephemeral: true });
+  } else if (subcommand === "rename") {
+    const poolIdentifier = interaction.options.getString("pool", true);
+    const newName = interaction.options.getString("newname", true);
+
+    let pool = InterServerChat.getPoolByName(poolIdentifier);
+    if (!pool) {
+      pool = InterServerChat.getPool(poolIdentifier);
+    }
+
+    if (!pool) {
+      await interaction.reply({
+        content: `❌ Pool "**${poolIdentifier}**" not found.`,
+        ephemeral: true,
+      });
+      return;
+    }
+
+    const existing = InterServerChat.getPoolByName(newName);
+    if (existing && existing.id !== pool.id) {
+      await interaction.reply({
+        content: `❌ A pool named "**${newName}**" already exists.`,
+        ephemeral: true,
+      });
+      return;
+    }
+
+    const success = InterServerChat.renamePool(pool.id, newName);
+
+    if (success) {
+      await interaction.reply({
+        content: `✅ Pool renamed from "**${pool.name}**" to "**${newName}**".`,
+      });
+    } else {
+      await interaction.reply({
+        content: "❌ Failed to rename pool.",
+        ephemeral: true,
+      });
+    }
+  } else if (subcommand === "delete") {
+    const poolIdentifier = interaction.options.getString("pool", true);
+
+    let pool = InterServerChat.getPoolByName(poolIdentifier);
+    if (!pool) {
+      pool = InterServerChat.getPool(poolIdentifier);
+    }
+
+    if (!pool) {
+      await interaction.reply({
+        content: `❌ Pool "**${poolIdentifier}**" not found.`,
+        ephemeral: true,
+      });
+      return;
+    }
+
+    const success = InterServerChat.deletePool(pool.id);
+
+    if (success) {
+      await interaction.reply({
+        content: `✅ Pool "**${pool.name}**" has been deleted. All channels have been disconnected.`,
+      });
+    } else {
+      await interaction.reply({
+        content: "❌ Failed to delete pool.",
         ephemeral: true,
       });
     }
   } else if (subcommand === "status") {
-    const links = InterServerChat.getLinks();
-    const link = links.find(
-      (l) =>
-        l.channelA === interaction.channelId ||
-        l.channelB === interaction.channelId,
+    const pool = InterServerChat.getPoolByChannel(interaction.channelId);
+
+    if (!pool) {
+      await interaction.reply({
+        content:
+          "ℹ️ This channel is not connected to any chat pool.\n\n" +
+          `Use \`/interchat join\` to join an existing pool, or \`/interchat create\` to create a new one.`,
+        ephemeral: true,
+      });
+      return;
+    }
+
+    const otherChannels = pool.channels.filter(
+      (ch) => ch.channelId !== interaction.channelId,
     );
 
-    if (link) {
-      const isA = link.channelA === interaction.channelId;
-      const partnerGuildId = isA ? link.guildB : link.guildA;
-      const partnerChannelId = isA ? link.channelB : link.channelA;
+    const channelList = await Promise.all(
+      otherChannels.map(async (ch) => {
+        const guild = interaction.client.guilds.cache.get(ch.guildId);
+        const guildName = guild?.name || `Unknown Server`;
+        const channel = guild?.channels.cache.get(ch.channelId);
+        const channelName = channel?.name || `unknown-channel`;
+        return `• #${channelName} (${guildName})`;
+      }),
+    );
 
-      // Try to fetch guild name if possible (might not be in cache if bot restarted)
-      const partnerGuild = interaction.client.guilds.cache.get(partnerGuildId);
-      const partnerName = partnerGuild ? partnerGuild.name : partnerGuildId;
+    const embed = new EmbedBuilder()
+      .setTitle("✅ Channel Status")
+      .setDescription(
+        `This channel is connected to pool "**${pool.name}**".\n\n` +
+          `Messages are being relayed to **${otherChannels.length}** other channel(s):`,
+      )
+      .addFields({
+        name: "Connected Channels",
+        value: channelList.join("\n") || "None (you're the only channel)",
+        inline: false,
+      })
+      .setColor("#00FF00");
 
-      await interaction.reply({
-        content: `🤑 This channel is linked to **<#${partnerChannelId}>** in **${partnerName}**.`,
-        ephemeral: true,
-      });
-    } else {
-      await interaction.reply({
-        content: "ℹ️ This channel is not linked to any other server.",
-        ephemeral: true,
-      });
-    }
+    await interaction.reply({ embeds: [embed], ephemeral: true });
   }
 }
