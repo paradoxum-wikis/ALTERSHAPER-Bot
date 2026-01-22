@@ -340,7 +340,7 @@ export async function execute(
     "**BANG!** A loud shot rings out as {user} eliminates {target}. The game is over.",
     "**BANG!** {user} fires the fatal shot at {target}. Survival is the only prize.",
     "**BANG!** {target} falls as {user} lowers the smoking gun. It is done.",
-    "**BANG!** {target} is no longer in the same world as {user}. {user} is walks away.",
+    "**BANG!** {target} is no longer in the same world as {user}. {user} leaves unharmed.",
     "**BANG!** {user}'s torment has concluded, farewell, {target}.",
     "**BANG!** {target}'s fate is sealed as {user} fires the killing shot.",
     "**BANG!** {target}'s story ends here, {user} is victorious.",
