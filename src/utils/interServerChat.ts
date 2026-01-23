@@ -207,7 +207,7 @@ export class InterServerChat {
       await webhook.send({
         content: content || "",
         username: `${displayName} • ${message.guild!.name}`,
-        avatarURL: message.author.displayAvatarURL(),
+        avatarURL: message.member?.displayAvatarURL(),
         files: files,
         allowedMentions: { parse: [] },
       });

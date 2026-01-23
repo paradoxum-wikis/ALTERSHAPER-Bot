@@ -4,6 +4,7 @@ import {
   PermissionFlagsBits,
   EmbedBuilder,
   ChannelType,
+  MessageFlags,
 } from "discord.js";
 import { InterServerChat } from "../utils/interServerChat.js";
 
@@ -94,7 +95,7 @@ export async function execute(
   if (!interaction.guild || !interaction.channel) {
     await interaction.reply({
       content: "This command can only be used in a server channel.",
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
     });
     return;
   }
@@ -102,7 +103,7 @@ export async function execute(
   if (interaction.channel.type !== ChannelType.GuildText) {
     await interaction.reply({
       content: "Interserver chat only supports text channels.",
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
     });
     return;
   }
@@ -114,7 +115,7 @@ export async function execute(
     if (existing) {
       await interaction.reply({
         content: `❌ A pool named "**${name}**" already exists.`,
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
       return;
     }
@@ -130,7 +131,7 @@ export async function execute(
       )
       .setColor("#00FF00");
 
-    await interaction.reply({ embeds: [embed] });
+    await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
   } else if (subcommand === "join") {
     const poolIdentifier = interaction.options.getString("pool", true);
 
@@ -142,7 +143,7 @@ export async function execute(
     if (!pool) {
       await interaction.reply({
         content: `❌ Pool "**${poolIdentifier}**" not found.`,
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
       return;
     }
@@ -162,12 +163,15 @@ export async function execute(
         )
         .setColor("#00FF00");
 
-      await interaction.reply({ embeds: [embed] });
+      await interaction.reply({
+        embeds: [embed],
+        flags: MessageFlags.Ephemeral,
+      });
     } else {
       await interaction.reply({
         content:
           "❌ Failed to join pool. This channel might already be in a pool.",
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
   } else if (subcommand === "leave") {
@@ -176,7 +180,7 @@ export async function execute(
     if (!pool) {
       await interaction.reply({
         content: "❌ This channel is not in any chat pool.",
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
       return;
     }
@@ -189,11 +193,12 @@ export async function execute(
     if (success) {
       await interaction.reply({
         content: `✅ This channel has been disconnected from pool "**${pool.name}**".`,
+        flags: MessageFlags.Ephemeral,
       });
     } else {
       await interaction.reply({
         content: "❌ Failed to disconnect channel from pool.",
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
   } else if (subcommand === "list") {
@@ -203,7 +208,7 @@ export async function execute(
       await interaction.reply({
         content:
           "ℹ️ No chat pools exist yet. Create one with `/interchat create`.",
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
       return;
     }
@@ -223,7 +228,7 @@ export async function execute(
       )
       .setColor("#0099FF");
 
-    await interaction.reply({ embeds: [embed], ephemeral: true });
+    await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
   } else if (subcommand === "info") {
     const poolIdentifier = interaction.options.getString("pool", true);
 
@@ -235,7 +240,7 @@ export async function execute(
     if (!pool) {
       await interaction.reply({
         content: `❌ Pool "**${poolIdentifier}**" not found.`,
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
       return;
     }
@@ -272,7 +277,7 @@ export async function execute(
       )
       .setColor("#0099FF");
 
-    await interaction.reply({ embeds: [embed], ephemeral: true });
+    await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
   } else if (subcommand === "rename") {
     const poolIdentifier = interaction.options.getString("pool", true);
     const newName = interaction.options.getString("newname", true);
@@ -285,7 +290,7 @@ export async function execute(
     if (!pool) {
       await interaction.reply({
         content: `❌ Pool "**${poolIdentifier}**" not found.`,
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
       return;
     }
@@ -294,7 +299,7 @@ export async function execute(
     if (existing && existing.id !== pool.id) {
       await interaction.reply({
         content: `❌ A pool named "**${newName}**" already exists.`,
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
       return;
     }
@@ -304,11 +309,12 @@ export async function execute(
     if (success) {
       await interaction.reply({
         content: `✅ Pool renamed from "**${pool.name}**" to "**${newName}**".`,
+        flags: MessageFlags.Ephemeral,
       });
     } else {
       await interaction.reply({
         content: "❌ Failed to rename pool.",
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
   } else if (subcommand === "delete") {
@@ -322,7 +328,7 @@ export async function execute(
     if (!pool) {
       await interaction.reply({
         content: `❌ Pool "**${poolIdentifier}**" not found.`,
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
       return;
     }
@@ -332,11 +338,12 @@ export async function execute(
     if (success) {
       await interaction.reply({
         content: `✅ Pool "**${pool.name}**" has been deleted. All channels have been disconnected.`,
+        flags: MessageFlags.Ephemeral,
       });
     } else {
       await interaction.reply({
         content: "❌ Failed to delete pool.",
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
   } else if (subcommand === "status") {
@@ -347,7 +354,7 @@ export async function execute(
         content:
           "ℹ️ This channel is not connected to any chat pool.\n\n" +
           `Use \`/interchat join\` to join an existing pool, or \`/interchat create\` to create a new one.`,
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
       return;
     }
@@ -379,6 +386,6 @@ export async function execute(
       })
       .setColor("#00FF00");
 
-    await interaction.reply({ embeds: [embed], ephemeral: true });
+    await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
   }
 }
