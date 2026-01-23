@@ -204,17 +204,9 @@ export class InterServerChat {
       const displayName =
         message.member?.displayName || message.author.username;
 
-      console.log(
-        `[INTERSERVERCHAT] Member avatar hash: ${message.member?.avatar}, User avatar hash: ${message.author.avatar}`,
-      );
-
       const avatarUrl = message.member?.avatar
         ? `https://cdn.discordapp.com/guilds/${message.guild!.id}/users/${message.author.id}/avatars/${message.member.avatar}.webp?size=512`
         : message.author.displayAvatarURL({ size: 512, extension: "webp" });
-
-      console.log(
-        `[INTERSERVERCHAT] Using avatar URL: ${avatarUrl} for user ${message.author.username} in guild ${message.guild!.name}`,
-      );
 
       await webhook.send({
         content: content || "",
