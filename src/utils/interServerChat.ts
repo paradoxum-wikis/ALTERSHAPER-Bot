@@ -204,10 +204,14 @@ export class InterServerChat {
       const displayName =
         message.member?.displayName || message.author.username;
 
+      const avatarUrl = message.member?.avatar
+        ? `https://cdn.discordapp.com/guilds/${message.guild!.id}/users/${message.author.id}/avatars/${message.member.avatar}.webp?size=512`
+        : message.author.displayAvatarURL({ size: 512, extension: "webp" });
+
       await webhook.send({
         content: content || "",
         username: `${displayName} • ${message.guild!.name}`,
-        avatarURL: message.member?.displayAvatarURL(),
+        avatarURL: avatarUrl,
         files: files,
         allowedMentions: { parse: [] },
       });
