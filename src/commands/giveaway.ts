@@ -89,7 +89,7 @@ export async function execute(
     .setColor("#FFD700")
     .setTitle("🎉 GIVEAWAY INITIATED")
     .setDescription(
-      `**The Altershaper has authorized a distribution of wealth!**\n\n**🎁 PRIZE:** ${prize}\n**👑 HOST:** ${executor}\n**🏆 WINNERS:** ${winnerCount}\n**⏰ ENDS:** <t:${Math.floor(endTime.getTime() / 1000)}:R>`,
+      `**Aphonos has authorized a distribution of wealth!**\n\n**🎁 PRIZE:** ${prize}\n**👑 HOST:** ${executor}\n**🏆 WINNERS:** ${winnerCount}\n**⏰ ENDS:** <t:${Math.floor(endTime.getTime() / 1000)}:R>`,
     )
     .addFields({
       name: "INSTRUCTIONS",
@@ -98,7 +98,7 @@ export async function execute(
       inline: false,
     })
     .setFooter({
-      text: "May the Altershaper guide fortune to the worthy.",
+      text: "May Aphonos guide fortune to the worthy.",
     })
     .setTimestamp();
 
@@ -153,7 +153,7 @@ export async function execute(
 
     if (participantArray.length === 0) {
       baseEndedEmbed.setDescription(
-        `**The Altershaper has authorized a distribution of wealth!**\n\n**🎁 PRIZE:** ${prize}\n**👑 HOST:** ${executor}\n**🏆 WINNERS:** ${winnerCount}\n**⏰ ENDED:** <t:${Math.floor(endTime.getTime() / 1000)}:R>\n\n**😔 RESULT:** No souls sought favor.`,
+        `**Aphonos has authorized a distribution of wealth!**\n\n**🎁 PRIZE:** ${prize}\n**👑 HOST:** ${executor}\n**🏆 WINNERS:** ${winnerCount}\n**⏰ ENDED:** <t:${Math.floor(endTime.getTime() / 1000)}:R>\n\n**😔 RESULT:** No souls sought favor.`,
       );
 
       await message.edit({
@@ -174,7 +174,7 @@ export async function execute(
       const winnerMentions = winners.map((id) => `<@${id}>`).join(", ");
 
       baseEndedEmbed.setDescription(
-        `**The Altershaper has authorized a distribution of wealth!**\n\n**🎁 PRIZE:** ${prize}\n**👑 HOST:** ${executor}\n**🏆 WINNERS:** ${winnerCount}\n**⏰ ENDED:** <t:${Math.floor(endTime.getTime() / 1000)}:R>\n\n**🎉 WINNERS:** ${winnerMentions}`,
+        `**Aphonos has authorized a distribution of wealth!**\n\n**🎁 PRIZE:** ${prize}\n**👑 HOST:** ${executor}\n**🏆 WINNERS:** ${winnerCount}\n**⏰ ENDED:** <t:${Math.floor(endTime.getTime() / 1000)}:R>\n\n**🎉 WINNERS:** ${winnerMentions}`,
       );
 
       await message.edit({

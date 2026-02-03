@@ -170,13 +170,12 @@ export class InterServerChat {
     const webhooks = await channel.fetchWebhooks();
     let webhook = webhooks.find(
       (wh) =>
-        wh.name === "Altershaper Relay" &&
-        wh.owner?.id === this.client.user?.id,
+        wh.name === "Aphonos Relay" && wh.owner?.id === this.client.user?.id,
     );
 
     if (!webhook) {
       webhook = await channel.createWebhook({
-        name: "Altershaper Relay",
+        name: "Aphonos Relay",
         avatar: this.client.user?.displayAvatarURL(),
       });
     }

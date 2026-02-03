@@ -138,7 +138,7 @@ const commands: CommandInfo[] = [
   // Basic - Page 2
   {
     name: "/info",
-    value: "Behold the knowledge of the altershaper",
+    value: "Behold the knowledge of Aphonos",
     category: "basic2",
   },
   {
@@ -217,7 +217,7 @@ function createEmbed(categoryIndex: number): EmbedBuilder {
 
   const embed = new EmbedBuilder()
     .setColor("#00CED1")
-    .setTitle("📜 DIVINE INSTRUMENTS OF THE ALTERSHAPER")
+    .setTitle("📜 DIVINE INSTRUMENTS OF APHONOS")
     .setDescription(
       `**These be the sacred instruments!**\n\n*"I am the hand of judgement, and upon the faithless shall I deliver righteous correction."*\n\n${category.description}\n\n**Page ${categoryIndex + 1} of ${categories.length}**`,
     )
@@ -228,7 +228,7 @@ function createEmbed(categoryIndex: number): EmbedBuilder {
         .join("\n\n"),
       inline: false,
     })
-    .setFooter({ text: "ALTERSHAPER - Divine Enforcer of Alteruism." })
+    .setFooter({ text: "Aphonos - Divine Enforcer of Alteruism." })
     .setTimestamp();
 
   return embed;

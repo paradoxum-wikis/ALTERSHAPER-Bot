@@ -100,7 +100,7 @@ export class WebhookManager {
    */
   public static async createWebhook(
     channel: TextChannel,
-    name: string = "Altershaper's Herald",
+    name: string = "Aphonos' Herald",
     customName?: string,
   ): Promise<Webhook | null> {
     try {
@@ -389,7 +389,7 @@ export class WebhookManager {
         webhookName || `herald_${this.webhookData?.nextHeraldNumber || 1}`;
       webhook = await this.createWebhook(
         targetChannel,
-        "Altershaper's Herald",
+        "Aphonos' Herald",
         webhookName, // Pass the original webhookName since it could be undefined
       );
 

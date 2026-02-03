@@ -1,6 +1,6 @@
-# ALTERSHAPER Bot - ALTER EGO Wiki Moderation Bot
+# Aphonos Bot - ALTER EGO Wiki Utility Bot
 
-A lawful angel Discord moderator—speaks in pseudo-biblical English. Has utilities to link an account with a wiki account, and give out appropriate roles. Also a bunch of fun commands such as `/aura` and `/battle`.
+Aphonos, formerly ALTERSHAPER, a utility discord bot made specifically for ALTER EGO Wiki and Tower Defense Simulator Wiki. Has utilities to link an account with a wiki account, and give out appropriate roles. Also a bunch of fun commands such as `/aura` and `/battle`.
 
 Extensive documentation will be found here: https://alter-ego.fandom.com/wiki/Help:ALTERSHAPER
 

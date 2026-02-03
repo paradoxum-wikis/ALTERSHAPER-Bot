@@ -17,7 +17,7 @@ interface GitHubCommit {
 
 export const data = new SlashCommandBuilder()
   .setName("info")
-  .setDescription("Behold the knowledge of the Altershaper");
+  .setDescription("Behold the knowledge of Aphonos");
 
 export async function execute(
   interaction: ChatInputCommandInteraction,
@@ -43,7 +43,7 @@ export async function execute(
 
   const embed = new EmbedBuilder()
     .setColor("#9932CC")
-    .setTitle("ℹ️ KNOWLEDGE OF THE ALTERSHAPER")
+    .setTitle("ℹ️ KNOWLEDGE OF APHONOS")
     .setDescription("**Behold the divine information of thy sacred enforcer!**")
     .addFields(
       {
@@ -70,7 +70,7 @@ export async function execute(
       },
     )
     .setFooter({
-      text: "The Altershaper stands eternal, guardian of Alteruism and enforcer of righteous order!",
+      text: "Aphonos stands eternal, guardian of Alteruism and enforcer of righteous order!",
     })
     .setTimestamp();
 

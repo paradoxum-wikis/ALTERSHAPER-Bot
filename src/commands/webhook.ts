@@ -58,7 +58,7 @@ export const data = new SlashCommandBuilder()
   .addSubcommand((subcommand) =>
     subcommand
       .setName("list")
-      .setDescription("List all of ALTERSHAPER's webhooks in this server"),
+      .setDescription("List all of Aphonos' webhooks in this server"),
   )
   .addSubcommand((subcommand) =>
     subcommand
@@ -151,7 +151,7 @@ export async function execute(
       case "test": {
         const testMessage =
           interaction.options.getString("message") ??
-          "**Behold! This is a test message from the Altershaper's herald!**";
+          "**Behold! This is a test message from the Aphonos' herald!**";
         const webhookName =
           interaction.options.getString("webhook") ?? undefined;
 
@@ -161,7 +161,7 @@ export async function execute(
           interaction.guild,
           testMessage,
           {
-            username: "Altershaper's Herald",
+            username: "Aphonos' Herald",
             webhookName: webhookName,
           },
         );
