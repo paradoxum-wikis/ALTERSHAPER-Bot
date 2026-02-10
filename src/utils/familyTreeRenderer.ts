@@ -732,7 +732,7 @@ export class FamilyTreeRenderer {
     }
 
     ctx.fillStyle = "#FFFFFF";
-    ctx.font = `bold 32px Verdana, sans-serif`;
+    ctx.font = `bold 32px 'URW Gothic', sans-serif`;
     ctx.textAlign = "left";
     ctx.textBaseline = "middle";
 
@@ -763,7 +763,7 @@ export class FamilyTreeRenderer {
 
     if (hasDiscriminator) {
       ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
-      ctx.font = `20px Verdana, sans-serif`;
+      ctx.font = `20px 'URW Gothic', sans-serif`;
       ctx.fillText(
         `#${user.discriminator}`,
         textX,

@@ -174,7 +174,7 @@ async function createRussianImage(
     ctx.drawImage(avatar, x, y, avatarSize, avatarSize);
 
     ctx.fillStyle = "#FFFFFF";
-    ctx.font = "bold 60px Verdana, sans-serif";
+    ctx.font = "bold 60px 'URW Gothic', sans-serif";
     ctx.textAlign = "center";
 
     ctx.fillText(targetName, 960, y + avatarSize + 155);
