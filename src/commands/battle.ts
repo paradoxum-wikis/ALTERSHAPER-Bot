@@ -10,7 +10,7 @@ import {
   ButtonStyle,
   ComponentType,
 } from "discord.js";
-import { createCanvas, loadImage } from "canvas";
+import { createCanvas, loadImage } from "@napi-rs/canvas";
 import path from "path";
 import { generateFighter, Fighter } from "../utils/fighterGenerator.js";
 import { BattleStatsManager } from "../utils/battleStatsManager.js";
@@ -186,7 +186,7 @@ async function createBattleImage(
       ctx.fillStyle = "#2F3136";
       ctx.fillRect(0, 0, 1920, 1080);
       ctx.fillStyle = "#FFFFFF";
-      ctx.font = "bold 66px Verdana, sans-serif";
+      ctx.font = "bold 66px 'URW Gothic', sans-serif";
       ctx.textAlign = "center";
       ctx.fillText("DEATHBATTLE", 960, 540);
     }
@@ -238,22 +238,25 @@ async function createBattleImage(
     }
 
     ctx.fillStyle = "#FFFFFF";
-    ctx.font = "bold 66px Verdana, sans-serif";
+    ctx.font = "bold 66px 'URW Gothic', sans-serif";
     ctx.textAlign = "center";
 
     // name fighter location
     ctx.fillText(fighter1Name, 475, 908);
     ctx.fillText(fighter2Name, 1440, 908);
 
-    return { buffer: canvas.toBuffer(), backgroundFileName };
+    return { buffer: canvas.toBuffer("image/png"), backgroundFileName };
   } catch (error) {
     ctx.fillStyle = "#2F3136";
     ctx.fillRect(0, 0, 1920, 1080);
     ctx.fillStyle = "#FFFFFF";
-    ctx.font = "bold 66px Verdana, sans-serif";
+    ctx.font = "bold 66px 'URW Gothic', sans-serif";
     ctx.textAlign = "center";
     ctx.fillText("DEATHBATTLE", 960, 540);
-    return { buffer: canvas.toBuffer(), backgroundFileName: "deathbattle.png" };
+    return {
+      buffer: canvas.toBuffer("image/png"),
+      backgroundFileName: "deathbattle.png",
+    };
   }
 }
 

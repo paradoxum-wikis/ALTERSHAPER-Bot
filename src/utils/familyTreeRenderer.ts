@@ -1,4 +1,8 @@
-import { createCanvas, loadImage, CanvasRenderingContext2D } from "canvas";
+import {
+  createCanvas,
+  loadImage,
+  CanvasRenderingContext2D,
+} from "@napi-rs/canvas";
 import { User } from "discord.js";
 
 interface TreeNode {
@@ -689,7 +693,8 @@ export class FamilyTreeRenderer {
       ctx.closePath();
       ctx.clip();
 
-      ctx.drawImage(
+      // i'll come back to this later, hopefully
+      (ctx as any).drawImage(
         avatar,
         avatarX,
         avatarY,
@@ -732,7 +737,7 @@ export class FamilyTreeRenderer {
     }
 
     ctx.fillStyle = "#FFFFFF";
-    ctx.font = `bold 32px Verdana, sans-serif`;
+    ctx.font = `bold 32px 'URW Gothic', sans-serif`;
     ctx.textAlign = "left";
     ctx.textBaseline = "middle";
 
@@ -763,7 +768,7 @@ export class FamilyTreeRenderer {
 
     if (hasDiscriminator) {
       ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
-      ctx.font = `20px Verdana, sans-serif`;
+      ctx.font = `20px 'URW Gothic', sans-serif`;
       ctx.fillText(
         `#${user.discriminator}`,
         textX,
