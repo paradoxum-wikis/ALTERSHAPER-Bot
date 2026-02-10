@@ -6,7 +6,7 @@ import {
   User,
   MessageFlags,
 } from "discord.js";
-import { createCanvas, loadImage } from "@napi-rs/canvas";
+import { createCanvas, loadImage } from "canvas";
 import path from "path";
 
 export const data = new SlashCommandBuilder()
@@ -147,7 +147,7 @@ async function createShipImage(
       ctx.fillStyle = percentage >= 60 ? "#FFB6C1" : "#888888";
       ctx.fillRect(0, 0, 1920, 1080);
       ctx.fillStyle = "#FFFFFF";
-      ctx.font = "bold 66px 'URW Gothic', sans-serif";
+      ctx.font = "bold 66px Verdana, sans-serif";
       ctx.textAlign = "center";
       ctx.fillText("SHIP", 960, 530);
     }
@@ -165,21 +165,21 @@ async function createShipImage(
 
     // ship name
     ctx.fillStyle = "#FFFFFF";
-    ctx.font = "bold 66px 'URW Gothic', sans-serif";
+    ctx.font = "bold 66px Verdana, sans-serif";
     ctx.textAlign = "center";
     ctx.fillText(shipName, 960, 952);
 
-    return canvas.toBuffer("image/png");
+    return canvas.toBuffer();
   } catch (error) {
     console.error("Error creating ship image:", error);
 
     ctx.fillStyle = "#FFB6C1";
     ctx.fillRect(0, 0, 1920, 1080);
     ctx.fillStyle = "#000";
-    ctx.font = "bold 66px 'URW Gothic', sans-serif";
+    ctx.font = "bold 66px Verdana, sans-serif";
     ctx.textAlign = "center";
     ctx.fillText("SHIP", 960, 530);
-    return canvas.toBuffer("image/png");
+    return canvas.toBuffer();
   }
 }
 

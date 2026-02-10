@@ -10,7 +10,7 @@ import {
   ComponentType,
   MessageFlags,
 } from "discord.js";
-import { createCanvas, loadImage } from "@napi-rs/canvas";
+import { createCanvas, loadImage } from "canvas";
 import path from "path";
 import { RussianStatsManager } from "../utils/russianStatsManager.js";
 import { LockManager } from "../utils/lockManager.js";
@@ -174,7 +174,7 @@ async function createRussianImage(
     ctx.drawImage(avatar, x, y, avatarSize, avatarSize);
 
     ctx.fillStyle = "#FFFFFF";
-    ctx.font = "bold 60px 'URW Gothic', sans-serif";
+    ctx.font = "bold 60px Verdana, sans-serif";
     ctx.textAlign = "center";
 
     ctx.fillText(targetName, 960, y + avatarSize + 155);
@@ -211,7 +211,7 @@ async function createRussianImage(
     console.error("Error drawing avatar:", error);
   }
 
-  return canvas.toBuffer("image/png");
+  return canvas.toBuffer();
 }
 
 export async function execute(
