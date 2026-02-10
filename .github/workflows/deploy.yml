@@ -43,7 +43,7 @@ jobs:
           port: ${{ secrets.PORT }}
           script: |
             cd ${{ secrets.DEPLOY_PATH }}
-            npm ci --omit=dev --omit=optional
+            npm ci --omit=dev
 
       - name: Restart ALTERSHAPER
         run: |
