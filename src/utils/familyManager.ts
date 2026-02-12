@@ -136,33 +136,46 @@ export class FamilyManager {
     guildId: string,
   ): Promise<void> {
     const data = await this.loadData();
+    const now = new Date().toISOString();
 
-    data.relationships.push({
-      userId,
-      relatedUserId,
-      relationshipType: type,
-      establishedAt: new Date().toISOString(),
-      guildId,
-    });
+    const hasExact = (
+      a: string,
+      b: string,
+      t: FamilyRelationship["relationshipType"],
+      g: string,
+    ) =>
+      data.relationships.some(
+        (rel) =>
+          rel.userId === a &&
+          rel.relatedUserId === b &&
+          rel.relationshipType === t &&
+          rel.guildId === g,
+      );
 
-    if (type === "spouse" || type === "sibling") {
+    const addExact = (
+      a: string,
+      b: string,
+      t: FamilyRelationship["relationshipType"],
+    ) => {
+      if (hasExact(a, b, t, guildId)) return;
+
       data.relationships.push({
-        userId: relatedUserId,
-        relatedUserId: userId,
-        relationshipType: type,
-        establishedAt: new Date().toISOString(),
+        userId: a,
+        relatedUserId: b,
+        relationshipType: t,
+        establishedAt: now,
         guildId,
       });
+    };
+
+    addExact(userId, relatedUserId, type);
+
+    if (type === "spouse" || type === "sibling") {
+      addExact(relatedUserId, userId, type);
     }
 
     if (type === "parent") {
-      data.relationships.push({
-        userId: relatedUserId,
-        relatedUserId: userId,
-        relationshipType: "child",
-        establishedAt: new Date().toISOString(),
-        guildId,
-      });
+      addExact(relatedUserId, userId, "child");
     }
 
     await this.saveData(data);

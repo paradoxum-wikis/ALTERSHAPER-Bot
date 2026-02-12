@@ -287,6 +287,20 @@ export async function execute(
           return;
         }
 
+        const existingMarriage = await FamilyManager.getRelationship(
+          interaction.user.id,
+          targetUser.id,
+          "spouse",
+        );
+
+        if (existingMarriage) {
+          await interaction.reply({
+            content: `**YOU ARE ALREADY MARRIED TO ${targetUser.tag.toUpperCase()}!**`,
+            flags: MessageFlags.Ephemeral,
+          });
+          return;
+        }
+
         const hasExistingRelationship = await FamilyManager.hasRelationship(
           interaction.user.id,
           targetUser.id,
@@ -688,6 +702,20 @@ export async function execute(
           return;
         }
 
+        const existingAdoption = await FamilyManager.getRelationship(
+          interaction.user.id,
+          targetUser.id,
+          "parent",
+        );
+
+        if (existingAdoption) {
+          await interaction.reply({
+            content: `**YOU HAVE ALREADY ADOPTED ${targetUser.tag.toUpperCase()}!**`,
+            flags: MessageFlags.Ephemeral,
+          });
+          return;
+        }
+
         const hasExistingRelationship = await FamilyManager.hasRelationship(
           interaction.user.id,
           targetUser.id,
@@ -1061,6 +1089,20 @@ export async function execute(
         if (targetUser.id === interaction.user.id) {
           await interaction.reply({
             content: "**YOU CANNOT BE YOUR OWN SIBLING!**",
+            flags: MessageFlags.Ephemeral,
+          });
+          return;
+        }
+
+        const existingSibling = await FamilyManager.getRelationship(
+          interaction.user.id,
+          targetUser.id,
+          "sibling",
+        );
+
+        if (existingSibling) {
+          await interaction.reply({
+            content: `**YOU ARE ALREADY SIBLINGS WITH ${targetUser.tag.toUpperCase()}!**`,
             flags: MessageFlags.Ephemeral,
           });
           return;
