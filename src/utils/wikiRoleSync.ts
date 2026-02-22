@@ -20,7 +20,7 @@ const ROLE_TO_WIKI_TAG_MAP: Record<string, string> = {
   [TOP_CONTRIBUTORS_ROLE_ID]: "Ego of the Week",
   [WIKI_SYNC_ROLES.ACTIVITY_WINNER]: "Ascended Ego",
   [WIKI_SYNC_ROLES.PARADOXUM]: "Paradoxum",
-  [WIKI_SYNC_ROLES.AE_STAFF]: "AE Staff",
+  [WIKI_SYNC_ROLES.AE_STAFF]: "AECord Staff",
   [WIKI_SYNC_ROLES.INTERWIKI_STAFF]: "Interwiki Staff",
   [WIKI_SYNC_ROLES.CONTENT_CREATOR]: "Content Creator",
   [WIKI_SYNC_ROLES.FIRST_VICTIM]: "First Victim",
@@ -29,7 +29,7 @@ const ROLE_TO_WIKI_TAG_MAP: Record<string, string> = {
   [WIKI_SYNC_ROLES.BOT]: "Holy Altershaper",
 };
 
-// Defines the exact order of tags for the wiki page output
+// order of tags for the wiki page output
 const WIKI_TAG_ORDER = [
   "Dictalter",
   "Altego Bureau",
@@ -42,7 +42,7 @@ const WIKI_TAG_ORDER = [
   "Ego of the Week",
   "Ascended Ego",
   "Paradoxum",
-  "AE Staff",
+  "AECord Staff",
   "Interwiki Staff",
   "Content Creator",
   "First Victim",
