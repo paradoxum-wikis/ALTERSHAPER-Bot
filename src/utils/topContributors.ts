@@ -53,7 +53,7 @@ export class TopContributorsManager {
    */
   private static async getNewestRecapFile(): Promise<string | null> {
     const currentYear = this.getCurrentYear();
-    const apiUrl = `https://api.github.com/repos/Paradoxum-Wikis/AEWiki-Recap/contents/data/${currentYear}`;
+    const apiUrl = `https://api.github.com/repos/paradoxum-wikis/automation/contents/aew/recap/data/${currentYear}`;
 
     try {
       const response = await fetch(apiUrl);
@@ -103,7 +103,7 @@ export class TopContributorsManager {
       return [];
     }
 
-    const url = `https://raw.githubusercontent.com/Paradoxum-Wikis/AEWiki-Recap/main/data/${currentYear}/${newestFile}`;
+    const url = `https://raw.githubusercontent.com/paradoxum-wikis/automation/main/aew/recap/data/${currentYear}/${newestFile}`;
 
     try {
       const response = await fetch(url);

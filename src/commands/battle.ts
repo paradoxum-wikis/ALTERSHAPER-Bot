@@ -732,7 +732,7 @@ export async function execute(
   if (isRanked && interaction.guildId !== "1362084781134708907") {
     await interaction.reply({
       content:
-        "**RANKED BATTLES CAN ONLY BE CONDUCTED IN THE SACRED ALTER EGO WIKI (.gg/aewiki)! This server does not have permission for competitive combat.**",
+        "**RANKED BATTLES CAN ONLY BE CONDUCTED IN THE SACRED ALTER EGO WIKI (.gg/yfZUQ3h4cf)! This server does not have permission for competitive combat.**",
       flags: MessageFlags.Ephemeral,
     });
     return;
