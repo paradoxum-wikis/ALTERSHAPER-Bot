@@ -19,13 +19,15 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        run: |
+          sudo apt-get update && sudo apt-get install -y libcairo2-dev pkg-config
+          npm ci
 
       - name: Build project
         run: npm run build
 
       - name: Copy built files
-        uses: appleboy/scp-action@v1.0.0
+        uses: appleboy/scp-action@v1
         with:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USER }}
@@ -35,7 +37,7 @@ jobs:
           target: ${{ secrets.DEPLOY_PATH }}
 
       - name: Install dependencies on server
-        uses: appleboy/ssh-action@v1.2.2
+        uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USER }}
