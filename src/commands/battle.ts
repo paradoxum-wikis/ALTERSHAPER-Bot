@@ -462,7 +462,7 @@ async function simulateBattleStep(
         damage = Math.ceil(attacker.attack * 0.5);
         const axisHeal = Math.ceil(attacker.attack * 0.5);
         attacker.hp = Math.min(attacker.hp + axisHeal, attacker.maxHp);
-        narration = `🪓 **${attacker.name}** performs an Axis Cleave, dealing damage and converting energy to heal ${axisHeal} HP!`;
+        narration = `✖️ **${attacker.name}** performs an Axis Cleave, dealing damage and converting energy to heal ${axisHeal} HP!`;
         break;
       case "Kim Ji Hoon Combo":
         damage = Math.floor(attacker.attack * 1.25);
