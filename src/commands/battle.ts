@@ -168,7 +168,7 @@ async function createBattleImage(
     path.join(process.cwd(), "altershaper-bot", "dist", backgroundFileName),
   ];
 
-  let background: any = null;
+  let background: import("canvas").Image | null = null;
 
   for (const imagePath of possiblePaths) {
     try {
@@ -205,7 +205,7 @@ async function createBattleImage(
       const tempCanvas = createCanvas(512, 512);
       const tempCtx = tempCanvas.getContext("2d");
 
-      let loserAvatar: any;
+      let loserAvatar: import("canvas").Image;
       let loserX: number;
 
       if (winner.id === fighter1.id) {

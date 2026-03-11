@@ -3,6 +3,7 @@ import {
   SlashCommandBuilder,
   EmbedBuilder,
   MessageFlags,
+  ColorResolvable,
 } from "discord.js";
 
 interface mwResponse {
@@ -87,7 +88,7 @@ export async function execute(
     const trivia = options[Math.floor(Math.random() * options.length)];
     const cleanedTrivia = cleanWikitext(trivia);
     const embed = new EmbedBuilder()
-      .setColor(color as any)
+      .setColor(color as ColorResolvable)
       .setTitle(title)
       .setDescription(cleanedTrivia)
       .setFooter({

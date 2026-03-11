@@ -57,7 +57,7 @@ export async function execute(
     await channel.setRateLimitPerUser(seconds, reason);
 
     await ModerationLogger.addEntry({
-      type: "slowmode" as any,
+      type: "slowmode" as never,
       userId: "N/A",
       userTag: "N/A",
       moderatorId: executor.id,

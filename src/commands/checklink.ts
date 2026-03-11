@@ -126,7 +126,14 @@ export async function execute(
     let rolesSynced = false;
     let grantedRoleNames: string[] = [];
     let failedRoleNames: string[] = [];
-    let topContributorResult: any = { roleGranted: false, roleRemoved: false };
+    let topContributorResult: {
+      roleGranted: boolean;
+      roleRemoved: boolean;
+      rank?: number;
+    } = {
+      roleGranted: false,
+      roleRemoved: false,
+    };
 
     if (fandomDataStatus === "Active") {
       console.log(

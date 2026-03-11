@@ -140,7 +140,7 @@ async function createRussianImage(
     path.join(process.cwd(), "altershaper-bot", "dist", "russian.png"),
   ];
 
-  let background: any = null;
+  let background: import("canvas").Image | null = null;
 
   for (const imagePath of possiblePaths) {
     try {

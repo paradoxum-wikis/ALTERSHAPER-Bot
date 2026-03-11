@@ -21,7 +21,7 @@ export const data = new SlashCommandBuilder()
   );
 
 function createEmbed(
-  messages: any[],
+  messages: import("../utils/messageLogger.js").PurgedMessage[],
   currentPage: number,
   totalPages: number,
   actionId?: string,
@@ -67,7 +67,10 @@ function createButtons(
   );
 }
 
-function addMessagesToEmbed(embed: EmbedBuilder, messages: any[]): void {
+function addMessagesToEmbed(
+  embed: EmbedBuilder,
+  messages: import("../utils/messageLogger.js").PurgedMessage[],
+): void {
   for (const message of messages) {
     const purgedDate = new Date(message.purgedAt).toLocaleDateString();
     const originalDate = new Date(message.timestamp).toLocaleDateString();

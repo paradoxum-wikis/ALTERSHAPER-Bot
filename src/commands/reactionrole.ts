@@ -25,7 +25,7 @@ function makeEmbed(params: {
   return new EmbedBuilder()
     .setTitle(params.title)
     .setDescription(params.description)
-    .setColor(params.color as any)
+    .setColor(params.color as import("discord.js").ColorResolvable)
     .setTimestamp();
 }
 

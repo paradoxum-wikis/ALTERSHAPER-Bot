@@ -33,8 +33,8 @@ import * as russianstats from "../commands/russianstats.js";
 import * as interchat from "../commands/interchat.js";
 
 export interface Command {
-  data: any;
-  execute: (...args: any[]) => Promise<void>;
+  data: unknown;
+  execute: Function;
 }
 
 export function loadCommands(): Collection<string, Command> {
