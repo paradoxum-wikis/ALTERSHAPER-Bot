@@ -5,6 +5,23 @@ import {
   MessageFlags,
 } from "discord.js";
 
+interface mwResponse {
+  query: {
+    pages: Record<
+      string,
+      {
+        revisions: {
+          slots: {
+            main: {
+              "*": string;
+            };
+          };
+        }[];
+      }
+    >;
+  };
+}
+
 function cleanWikitext(text: string): string {
   text = text.replace(/\[\[([^|\]]+\|)?([^\]]+)\]\]/g, "$2");
   text = text.replace(/'''([^']+)'''/g, "$1");
@@ -36,13 +53,15 @@ export async function execute(
   let color = "";
 
   if (game === "tds") {
-    url = "https://tds.fandom.com/wiki/Template:DYKBoxContent?action=raw";
+    url =
+      "https://tds.fandom.com/api.php?action=query&titles=Template:DYKBoxContent&prop=revisions&rvslots=main&rvprop=content&format=json";
     title = "📚 Did you know that in Tower Defense Simulator:";
     footer =
       "Verily, I have drawn forth this knowledge from the annals of TDS Wiki.";
     color = "#33577A";
   } else {
-    url = "https://alter-ego.fandom.com/wiki/ALTERPEDIA/DYK?action=raw";
+    url =
+      "https://alter-ego.fandom.com/api.php?action=query&titles=ALTERPEDIA/DYK&prop=revisions&rvslots=main&rvprop=content&format=json";
     title = "📚 Did you know that in ALTER EGO:";
     footer =
       "Verily, I have drawn forth this knowledge from the annals of ALTERPEDIA.";
@@ -54,7 +73,10 @@ export async function execute(
     if (!response.ok) {
       throw new Error("Failed to fetch trivia");
     }
-    const text = await response.text();
+    const json = (await response.json()) as mwResponse;
+    const pages = json.query.pages;
+    const pageId = Object.keys(pages)[0];
+    const text = pages[pageId].revisions[0].slots.main["*"];
     const options = Array.from(
       text.matchAll(/<option>(.*?)<\/option>/gs),
       (m) => m[1].trim(),
