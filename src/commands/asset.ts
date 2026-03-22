@@ -20,28 +20,22 @@ function buildFormData(assetId: string): { body: string; boundary: string } {
 }
 
 async function getRobloxAssetDownloadLink(assetId: string): Promise<string> {
-  const { body, boundary } = buildFormData(assetId);
-
   const response = await fetch("https://services.toru.ca/", {
     method: "POST",
     headers: {
-      "Content-Type": `multipart/form-data; boundary=${boundary}`,
+      "Content-Type": "application/json",
       "X-BOT-AUTH": process.env.SERVICE7!,
     },
-    body,
+    body: JSON.stringify({ assetId }),
   });
-
   if (!response.ok) {
     throw new Error(`API responded with status ${response.status}`);
   }
-
   const result = (await response.json()) as { file?: string; error?: unknown };
-
   if (result.error || !result.file) {
     throw new Error("API Error: " + JSON.stringify(result));
   }
-
-  return `https://services.toru.ca/?download=1&file=${encodeURIComponent(result.file)}`;
+  return result.file;
 }
 
 export const data = new SlashCommandBuilder()
