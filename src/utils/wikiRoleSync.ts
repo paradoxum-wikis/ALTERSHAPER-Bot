@@ -197,8 +197,11 @@ export class WikiRoleSyncManager {
 
     try {
       const currentPageContent = await this.getPageContent();
-      const headerMatch = currentPageContent.match(/^((\s*\/\/.*\n)*)/);
-      const header = headerMatch ? headerMatch[0] : "";
+      const firstRoleIndex = currentPageContent.search(/\n@/);
+      const header =
+        firstRoleIndex !== -1
+          ? currentPageContent.substring(0, firstRoleIndex + 1)
+          : "";
 
       let newContent = header;
       for (const tag of WIKI_TAG_ORDER) {
