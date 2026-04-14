@@ -159,7 +159,11 @@ export class WikiRoleSyncManager {
       return { success: false, message: "No linked users found to sync." };
     }
 
-    const userTags: Record<string, string[]> = {};
+    const tagToUsers: Record<string, string[]> = {};
+
+    for (const tag of WIKI_TAG_ORDER) {
+      tagToUsers[tag] = [];
+    }
 
     for (const link of allLinks) {
       const member = await guild.members
@@ -175,13 +179,21 @@ export class WikiRoleSyncManager {
         }
       }
 
-      if (memberTags.size > 0) {
-        const sortedTags = WIKI_TAG_ORDER.filter((tag) => memberTags.has(tag));
-        userTags[link.fandomUsername] = sortedTags;
+      for (const tag of memberTags) {
+        if (tagToUsers[tag]) {
+          tagToUsers[tag].push(link.fandomUsername);
+        }
       }
     }
 
-    userTags["DarkGabonnie"] = ["Holy Altershaper"];
+    for (const tag of Object.keys(tagToUsers)) {
+      tagToUsers[tag].sort((a, b) => a.localeCompare(b));
+    }
+
+    if (tagToUsers["Holy Altershaper"]) {
+      tagToUsers["Holy Altershaper"].push("DarkGabonnie");
+      tagToUsers["Holy Altershaper"].sort((a, b) => a.localeCompare(b));
+    }
 
     try {
       const currentPageContent = await this.getPageContent();
@@ -189,13 +201,10 @@ export class WikiRoleSyncManager {
       const header = headerMatch ? headerMatch[0] : "";
 
       let newContent = header;
-      const sortedUsernames = Object.keys(userTags).sort((a, b) =>
-        a.localeCompare(b),
-      );
-      for (const username of sortedUsernames) {
-        const tags = userTags[username];
-        if (tags.length > 0) {
-          newContent += `${username}|${tags.join(", ")}\n`;
+      for (const tag of WIKI_TAG_ORDER) {
+        const users = tagToUsers[tag];
+        if (users.length > 0) {
+          newContent += `@${tag}|${users.join(", ")}\n`;
         }
       }
 
@@ -210,7 +219,7 @@ export class WikiRoleSyncManager {
       );
       return {
         success: true,
-        message: `Successfully synced roles for ${Object.keys(userTags).length} users to MediaWiki:ProfileTags.`,
+        message: `Successfully synced roles for ${new Set(Object.values(tagToUsers).flat()).size} users to MediaWiki:ProfileTags.`,
       };
     } catch (error) {
       console.error("Error during wiki role sync:", error);
