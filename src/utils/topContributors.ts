@@ -18,9 +18,9 @@ interface ContributorData {
 }
 
 interface RecapData {
-  timestamp: string;
-  totalContributors: number;
-  contributors: ContributorData[];
+  week: string;
+  totalMessages: number;
+  counts: Record<string, number>;
 }
 
 interface GitHubApiResponse {
@@ -53,7 +53,7 @@ export class TopContributorsManager {
    */
   private static async getNewestRecapFile(): Promise<string | null> {
     const currentYear = this.getCurrentYear();
-    const apiUrl = `https://api.github.com/repos/paradoxum-wikis/automation/contents/aew/recap/data/${currentYear}`;
+    const apiUrl = `https://api.github.com/repos/paradoxum-wikis/automation/contents/data/recap/aew/${currentYear}`;
 
     try {
       const response = await fetch(apiUrl);
@@ -71,7 +71,7 @@ export class TopContributorsManager {
         .filter(
           (file) =>
             file.type === "file" &&
-            file.name.startsWith("recap-") &&
+            /^\d{4}-\d{2}-\d{2}\.json$/.test(file.name) &&
             file.name.endsWith(".json"),
         )
         .sort((a, b) => b.name.localeCompare(a.name));
@@ -103,7 +103,7 @@ export class TopContributorsManager {
       return [];
     }
 
-    const url = `https://raw.githubusercontent.com/paradoxum-wikis/automation/main/aew/recap/data/${currentYear}/${newestFile}`;
+    const url = `https://raw.githubusercontent.com/paradoxum-wikis/automation/main/data/recap/aew/${currentYear}/${newestFile}`;
 
     try {
       const response = await fetch(url);
@@ -118,7 +118,22 @@ export class TopContributorsManager {
       console.log(
         `[TOPCONTRIBUTORS] Successfully loaded top contributors data from ${newestFile}`,
       );
-      return data.contributors || [];
+
+      return Object.entries(data.counts)
+        .sort(([, a], [, b]) => b - a)
+        .map(([userName, count], index) => ({
+          userName,
+          userId: "",
+          avatar: "",
+          profileUrl: "",
+          userContactPage: "",
+          isAdmin: false,
+          isCurrent: true,
+          contributions: count.toString(),
+          latestRevision: null,
+          contributionsText: count.toString(),
+          index: index + 1,
+        }));
     } catch (error) {
       console.error(
         `Error fetching top contributors data from ${newestFile}: ${error}`,
