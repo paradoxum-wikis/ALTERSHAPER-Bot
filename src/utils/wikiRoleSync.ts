@@ -57,7 +57,34 @@ export class WikiRoleSyncManager {
   private static botUsername = process.env.WIKI_BOT_USERNAME;
   private static botPassword = process.env.WIKI_BOT_PASSWORD;
   private static editToken: string | null = null;
-  private static cookie: string | null = null;
+  private static cookies: Map<string, string> = new Map();
+
+  private static buildCookieHeader(): string {
+    return Array.from(this.cookies.entries())
+      .map(([name, value]) => `${name}=${value}`)
+      .join("; ");
+  }
+
+  private static storeCookies(response: Response): void {
+    const setCookieHeaders =
+      typeof (response.headers as any).getSetCookie === "function"
+        ? (response.headers as any).getSetCookie()
+        : response.headers.get("set-cookie")
+          ? [response.headers.get("set-cookie") as string]
+          : [];
+
+    for (const rawCookie of setCookieHeaders) {
+      const firstPart = rawCookie.split(";")[0];
+      const separatorIndex = firstPart.indexOf("=");
+      if (separatorIndex === -1) continue;
+
+      const name = firstPart.slice(0, separatorIndex).trim();
+      const value = firstPart.slice(separatorIndex + 1).trim();
+      if (!name) continue;
+
+      this.cookies.set(name, value);
+    }
+  }
 
   private static async apiRequest(params: URLSearchParams) {
     const response = await fetch(API_URL, {
@@ -65,16 +92,13 @@ export class WikiRoleSyncManager {
       body: params,
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
-        Cookie: this.cookie || "",
+        Cookie: this.buildCookieHeader(),
       },
     });
     if (!response.ok) {
       throw new Error(`API request failed: ${response.statusText}`);
     }
-    const setCookie = response.headers.get("set-cookie");
-    if (setCookie) {
-      this.cookie = setCookie;
-    }
+    this.storeCookies(response);
     return response.json();
   }
 
