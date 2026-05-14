@@ -90,7 +90,7 @@ const commands: CommandInfo[] = [
     category: "basic1",
   },
   {
-    name: "/avatar [@user]",
+    name: "/avatar [@user] [-global]",
     value: "Behold the divine visage of a soul",
     category: "basic1",
   },
