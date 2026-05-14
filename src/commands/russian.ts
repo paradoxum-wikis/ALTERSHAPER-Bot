@@ -3,6 +3,7 @@ import {
   SlashCommandBuilder,
   EmbedBuilder,
   AttachmentBuilder,
+  GuildMember,
   User,
   ButtonBuilder,
   ButtonStyle,
@@ -128,7 +129,9 @@ async function handleConsentPhase(
 async function createRussianImage(
   targetUser: User,
   targetName: string,
+  targetMember: GuildMember | null,
   currentTurnUser: User,
+  currentTurnMember: GuildMember | null,
   filter: "none" | "bw" | "red" = "none",
 ): Promise<Buffer> {
   const canvas = createCanvas(1920, 1080);
@@ -164,9 +167,19 @@ async function createRussianImage(
   }
 
   try {
-    const avatar = await loadImage(
-      targetUser.displayAvatarURL({ extension: "png", size: 512 }),
-    );
+    const targetAvatarHash = targetMember?.avatar ?? targetUser.avatar;
+    const targetAnimatedAvatar = targetAvatarHash?.startsWith("a_");
+    const targetAvatarUrl =
+      targetMember?.displayAvatarURL({
+        extension: targetAnimatedAvatar ? "gif" : "png",
+        size: 512,
+      }) ??
+      targetUser.displayAvatarURL({
+        extension: targetAnimatedAvatar ? "gif" : "png",
+        size: 512,
+      });
+
+    const avatar = await loadImage(targetAvatarUrl);
     const avatarSize = 512;
     const x = 960 - avatarSize / 2 + 1;
     const y = 540 - avatarSize / 2 + 1;
@@ -179,9 +192,19 @@ async function createRussianImage(
 
     ctx.fillText(targetName, 960, y + avatarSize + 155);
 
-    const turnAvatar = await loadImage(
-      currentTurnUser.displayAvatarURL({ extension: "png", size: 256 }),
-    );
+    const turnAvatarHash = currentTurnMember?.avatar ?? currentTurnUser.avatar;
+    const turnAnimatedAvatar = turnAvatarHash?.startsWith("a_");
+    const turnAvatarUrl =
+      currentTurnMember?.displayAvatarURL({
+        extension: turnAnimatedAvatar ? "gif" : "png",
+        size: 256,
+      }) ??
+      currentTurnUser.displayAvatarURL({
+        extension: turnAnimatedAvatar ? "gif" : "png",
+        size: 256,
+      });
+
+    const turnAvatar = await loadImage(turnAvatarUrl);
     const turnAvatarSize = 216;
     const turnX = 90;
     const turnY = 1080 - turnAvatarSize - 90;
@@ -288,6 +311,14 @@ export async function execute(
 
   let currentTurnUser = inviterUser;
   let opponentUser = targetUser;
+  let inviterMember: GuildMember | null = null;
+  let targetMember: GuildMember | null = null;
+
+  if (interaction.inGuild()) {
+    inviterMember = await interaction.guild!.members.fetch(inviterUser.id);
+    targetMember = await interaction.guild!.members.fetch(targetUser.id);
+  }
+
   let bulletSlot = Math.floor(Math.random() * 6);
   let currentSlot = 0;
   let gameOver = false;
@@ -375,10 +406,15 @@ export async function execute(
     imageTarget?: User,
   ) => {
     const target = imageTarget || opponentUser;
+    const targetImageMember = target.id === inviterUser.id ? inviterMember : targetMember;
+    const currentTurnImageMember =
+      currentTurnUser.id === inviterUser.id ? inviterMember : targetMember;
     const imageBuffer = await createRussianImage(
       target,
       target.username,
+      targetImageMember,
       currentTurnUser,
+      currentTurnImageMember,
       filter,
     );
     const attachment = new AttachmentBuilder(imageBuffer, {

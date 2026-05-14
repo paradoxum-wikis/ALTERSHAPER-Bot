@@ -3,6 +3,7 @@ import {
   SlashCommandBuilder,
   EmbedBuilder,
   AttachmentBuilder,
+  GuildMember,
   User,
   MessageFlags,
 } from "discord.js";
@@ -116,6 +117,8 @@ function getFlavorText(percentage: number): string {
 async function createShipImage(
   user1: User,
   user2: User,
+  user1Member: GuildMember | null,
+  user2Member: GuildMember | null,
   shipName: string,
   percentage: number,
 ): Promise<Buffer> {
@@ -152,12 +155,32 @@ async function createShipImage(
       ctx.fillText("SHIP", 960, 530);
     }
 
-    const avatar1 = await loadImage(
-      user1.displayAvatarURL({ extension: "png", size: 512 }),
-    );
-    const avatar2 = await loadImage(
-      user2.displayAvatarURL({ extension: "png", size: 512 }),
-    );
+    const user1AvatarHash = user1Member?.avatar ?? user1.avatar;
+    const user1AnimatedAvatar = user1AvatarHash?.startsWith("a_");
+    const user1AvatarUrl =
+      user1Member?.displayAvatarURL({
+        extension: user1AnimatedAvatar ? "gif" : "png",
+        size: 512,
+      }) ??
+      user1.displayAvatarURL({
+        extension: user1AnimatedAvatar ? "gif" : "png",
+        size: 512,
+      });
+
+    const user2AvatarHash = user2Member?.avatar ?? user2.avatar;
+    const user2AnimatedAvatar = user2AvatarHash?.startsWith("a_");
+    const user2AvatarUrl =
+      user2Member?.displayAvatarURL({
+        extension: user2AnimatedAvatar ? "gif" : "png",
+        size: 512,
+      }) ??
+      user2.displayAvatarURL({
+        extension: user2AnimatedAvatar ? "gif" : "png",
+        size: 512,
+      });
+
+    const avatar1 = await loadImage(user1AvatarUrl);
+    const avatar2 = await loadImage(user2AvatarUrl);
 
     // avatars
     ctx.drawImage(avatar1, 125, 285, 512, 512);
@@ -259,12 +282,14 @@ export async function execute(
   try {
     let user1Name: string;
     let user2Name: string;
+    let user1Member: GuildMember | null = null;
+    let user2Member: GuildMember | null = null;
 
     if (interaction.inGuild()) {
-      const member1 = await interaction.guild!.members.fetch(user1.id);
-      const member2 = await interaction.guild!.members.fetch(user2.id);
-      user1Name = member1.displayName;
-      user2Name = member2.displayName;
+      user1Member = await interaction.guild!.members.fetch(user1.id);
+      user2Member = await interaction.guild!.members.fetch(user2.id);
+      user1Name = user1Member.displayName;
+      user2Name = user2Member.displayName;
     } else {
       user1Name = user1.username;
       user2Name = user2.username;
@@ -279,6 +304,8 @@ export async function execute(
     const imageBuffer = await createShipImage(
       user1,
       user2,
+      user1Member,
+      user2Member,
       shipName,
       percentage,
     );

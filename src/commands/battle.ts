@@ -3,6 +3,7 @@ import {
   SlashCommandBuilder,
   EmbedBuilder,
   AttachmentBuilder,
+  GuildMember,
   User,
   MessageFlags,
   ActionRowBuilder,
@@ -145,6 +146,8 @@ async function createBattleImage(
   fighter2: User,
   fighter1Name: string,
   fighter2Name: string,
+  fighter1Member: GuildMember | null,
+  fighter2Member: GuildMember | null,
   winner?: User,
   isRanked: boolean = false,
   forceBackground?: string,
@@ -191,12 +194,32 @@ async function createBattleImage(
       ctx.fillText("DEATHBATTLE", 960, 540);
     }
 
-    const avatar1 = await loadImage(
-      fighter1.displayAvatarURL({ extension: "png", size: 512 }),
-    );
-    const avatar2 = await loadImage(
-      fighter2.displayAvatarURL({ extension: "png", size: 512 }),
-    );
+    const fighter1AvatarHash = fighter1Member?.avatar ?? fighter1.avatar;
+    const fighter1AnimatedAvatar = fighter1AvatarHash?.startsWith("a_");
+    const fighter1AvatarUrl =
+      fighter1Member?.displayAvatarURL({
+        extension: fighter1AnimatedAvatar ? "gif" : "png",
+        size: 512,
+      }) ??
+      fighter1.displayAvatarURL({
+        extension: fighter1AnimatedAvatar ? "gif" : "png",
+        size: 512,
+      });
+
+    const fighter2AvatarHash = fighter2Member?.avatar ?? fighter2.avatar;
+    const fighter2AnimatedAvatar = fighter2AvatarHash?.startsWith("a_");
+    const fighter2AvatarUrl =
+      fighter2Member?.displayAvatarURL({
+        extension: fighter2AnimatedAvatar ? "gif" : "png",
+        size: 512,
+      }) ??
+      fighter2.displayAvatarURL({
+        extension: fighter2AnimatedAvatar ? "gif" : "png",
+        size: 512,
+      });
+
+    const avatar1 = await loadImage(fighter1AvatarUrl);
+    const avatar2 = await loadImage(fighter2AvatarUrl);
 
     ctx.drawImage(avatar1, 225, 285, 512, 512);
     ctx.drawImage(avatar2, 1183, 285, 512, 512);
@@ -859,12 +882,14 @@ export async function execute(
 
     let fighter1DisplayName: string;
     let fighter2DisplayName: string;
+    let fighter1Member: GuildMember | null = null;
+    let fighter2Member: GuildMember | null = null;
 
     if (interaction.inGuild()) {
-      const member1 = await interaction.guild!.members.fetch(fighter1User.id);
-      const member2 = await interaction.guild!.members.fetch(fighter2User.id);
-      fighter1DisplayName = member1.displayName;
-      fighter2DisplayName = member2.displayName;
+      fighter1Member = await interaction.guild!.members.fetch(fighter1User.id);
+      fighter2Member = await interaction.guild!.members.fetch(fighter2User.id);
+      fighter1DisplayName = fighter1Member.displayName;
+      fighter2DisplayName = fighter2Member.displayName;
     } else {
       fighter1DisplayName = fighter1User.username;
       fighter2DisplayName = fighter2User.username;
@@ -887,6 +912,8 @@ export async function execute(
       fighter2User,
       fighter1DisplayName,
       fighter2DisplayName,
+      fighter1Member,
+      fighter2Member,
       undefined,
       isRanked,
     );
@@ -1003,6 +1030,8 @@ export async function execute(
       fighter2User,
       fighter1DisplayName,
       fighter2DisplayName,
+      fighter1Member,
+      fighter2Member,
       winner.user,
       isRanked,
       imageResult.backgroundFileName,
