@@ -1,5 +1,5 @@
 import { GuildMember } from "discord.js";
-import { FANDOM_ROLE_MAP, TDS_WIKI_STAFF } from "./roleConstants.js";
+import { FANDOM_ROLE_MAP, TDS_WIKI_STAFF, WIKI_SYNC_ROLES } from "./roleConstants.js";
 
 const COMMANDS_CHANNEL_ID = process.env.CMDS_CHANNEL_ID;
 
@@ -42,6 +42,7 @@ export const ROLE_PERMISSIONS: Record<string, PermissionLevel> = {
   [FANDOM_ROLE_MAP["content-moderator"]]: PermissionLevel.MODERATOR,
   [FANDOM_ROLE_MAP.threadmoderator]: PermissionLevel.MODERATOR,
   [TDS_WIKI_STAFF]: PermissionLevel.ADMIN,
+  [WIKI_SYNC_ROLES.DICTATOR]: PermissionLevel.ADMIN,
 };
 
 export class RolePermissions {
