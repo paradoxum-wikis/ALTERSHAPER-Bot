@@ -7,6 +7,7 @@ import {
   STAFF_ROLE_ID,
   EDIT_COUNT_ROLES,
   EDIT_COUNT_ROLE_IDS,
+  WIKI_SYNC_ROLES,
 } from "./roleConstants.js";
 
 export interface RoleSyncResult {
@@ -161,7 +162,11 @@ export class FandomRoleManager {
         (FANDOM_ROLE_IDS.includes(role.id) ||
           EDIT_COUNT_ROLE_IDS.includes(role.id) ||
           role.id === STAFF_ROLE_ID) &&
-        !rolesToGrantIds.includes(role.id)
+        !rolesToGrantIds.includes(role.id) &&
+        !(
+          role.id === STAFF_ROLE_ID &&
+          member.roles.cache.has(WIKI_SYNC_ROLES.DICTATOR)
+        )
       ) {
         rolesToRemoveFromMember.push(role.id);
       }
