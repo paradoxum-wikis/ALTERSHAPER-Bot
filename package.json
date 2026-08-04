@@ -14,14 +14,17 @@
   "author": "t7ru",
   "license": "MIT",
   "dependencies": {
-    "canvas": "^3.2.0",
-    "discord.js": "^14.25.1",
-    "dotenv": "^17.2.3"
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "@professional-wiki/mediawiki-mcp-server": "^0.16.0",
+    "canvas": "^3.2.3",
+    "discord.js": "^14.27.0",
+    "dotenv": "^17.4.2",
+    "openai": "^7.4.0"
   },
   "devDependencies": {
-    "@types/node": "^24.10.1",
-    "prettier": "^3.6.2",
-    "tsx": "^4.20.6",
+    "@types/node": "^24.13.3",
+    "prettier": "^3.9.6",
+    "tsx": "^4.23.5",
     "typescript": "^5.9.3"
   }
 }
