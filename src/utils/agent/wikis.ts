@@ -54,6 +54,7 @@ export function mcpServerConfig() {
       username: "${WIKI_BOT_USERNAME}",
       password: "${WIKI_BOT_PASSWORD}",
       private: false,
+      attributeEdits: false,
     };
   }
   return {
