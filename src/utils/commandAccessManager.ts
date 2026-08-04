@@ -1,11 +1,11 @@
-const WHITELISTED_SERVERS: string[] = [
-  "1362084781134708907", // ALTER EGO Wiki
-  "1040506880168034374",
-];
+const AEW = "1362084781134708907";
+const TDSW = "735394249863987241";
+const TEST = "1040506880168034374";
 
-// Commands that are allowed in whitelisted servers only
-// All other commands will be globally available
-const RESTRICTED_COMMANDS: string[] = [
+const RESTRICTED_SERVERS = [AEW, TEST];
+const WIKI_SERVERS = [AEW, TDSW, TEST];
+
+const RESTRICTED_COMMANDS = new Set([
   "ban",
   "kick",
   "timeout",
@@ -20,8 +20,9 @@ const RESTRICTED_COMMANDS: string[] = [
   "removelink",
   "removesin",
   "anime",
-  "job",
-];
+]);
+
+const WIKI_COMMANDS = new Set(["job"]);
 
 export class CommandAccessManager {
   /**
@@ -34,11 +35,14 @@ export class CommandAccessManager {
     commandName: string,
     guildId: string | null,
   ): boolean {
-    if (!RESTRICTED_COMMANDS.includes(commandName)) {
-      return true;
+    const id = guildId || "";
+    if (WIKI_COMMANDS.has(commandName)) {
+      return WIKI_SERVERS.includes(id);
     }
-
-    return WHITELISTED_SERVERS.includes(guildId || "");
+    if (RESTRICTED_COMMANDS.has(commandName)) {
+      return RESTRICTED_SERVERS.includes(id);
+    }
+    return true;
   }
 
   /**
