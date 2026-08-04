@@ -10,43 +10,28 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v6
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: npm
 
-      - name: Install dependencies
+      - name: Install and build
         run: |
           sudo apt-get update && sudo apt-get install -y libcairo2-dev pkg-config
           npm ci
+          npm run build
+          npm prune --omit=dev
 
-      - name: Build project
-        run: npm run build
-
-      - name: Copy built files
-        uses: appleboy/scp-action@v1
+      - uses: appleboy/scp-action@v1
         with:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USER }}
           key: ${{ secrets.KEY }}
           port: ${{ secrets.PORT }}
-          source: "dist,package.json,package-lock.json"
+          source: "dist,node_modules,package.json,package-lock.json"
           target: ${{ secrets.DEPLOY_PATH }}
-
-      - name: Install dependencies on server
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.HOST }}
-          username: ${{ secrets.USER }}
-          key: ${{ secrets.KEY }}
-          port: ${{ secrets.PORT }}
-          script: |
-            cd ${{ secrets.DEPLOY_PATH }}
-            npm ci --omit=dev
+          overwrite: true
 
       - name: Restart ALTERSHAPER
-        run: |
-          curl -X POST -u "${{ secrets.API_KEY }}:" ${{ secrets.API_URL }}
+        run: curl -X POST -u "${{ secrets.API_KEY }}:" ${{ secrets.API_URL }}
