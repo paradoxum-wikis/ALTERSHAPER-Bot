@@ -120,9 +120,41 @@ export async function getPageInfo(
   return out;
 }
 
-export async function clearPage(
+export async function getPageWikitext(
   wiki: WikiConfig,
   title: string,
+): Promise<string | null> {
+  const url = new URL(wiki.apiBase);
+  url.search = new URLSearchParams({
+    action: "query",
+    prop: "revisions",
+    rvprop: "content",
+    rvslots: "main",
+    titles: title,
+    format: "json",
+    formatversion: "2",
+  }).toString();
+
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Wiki API ${res.status}`);
+  const data = (await res.json()) as {
+    query?: {
+      pages?: {
+        missing?: boolean;
+        revisions?: { slots?: { main?: { content?: string } } }[];
+      }[];
+    };
+  };
+  const page = data.query?.pages?.[0];
+  if (!page || page.missing) return null;
+  return page.revisions?.[0]?.slots?.main?.content ?? null;
+}
+
+async function edit(
+  wiki: WikiConfig,
+  title: string,
+  text: string,
+  summary: string,
 ): Promise<void> {
   const cookie = await login(wiki.apiBase);
   const tokenRes = await post(
@@ -144,8 +176,8 @@ export async function clearPage(
     {
       action: "edit",
       title,
-      text: "",
-      summary: "Clear job page",
+      text,
+      summary,
       token: csrftoken,
       format: "json",
       bot: "1",
@@ -153,10 +185,20 @@ export async function clearPage(
     tokenRes.cookie,
   );
 
-  const edit = editRes.json.edit as { result?: string } | undefined;
-  if (edit?.result !== "Success") {
+  const result = editRes.json.edit as { result?: string } | undefined;
+  if (result?.result !== "Success") {
     throw new Error(
-      `Clear failed: ${JSON.stringify(editRes.json.error ?? editRes.json)}`,
+      `Edit failed: ${JSON.stringify(editRes.json.error ?? editRes.json)}`,
     );
   }
 }
+
+export const clearPage = (wiki: WikiConfig, title: string) =>
+  edit(wiki, title, "", "Clear job page");
+
+export const publishPage = (
+  wiki: WikiConfig,
+  title: string,
+  text: string,
+  summary: string,
+) => edit(wiki, title, text, summary);

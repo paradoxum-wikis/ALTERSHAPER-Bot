@@ -1,13 +1,27 @@
 import {
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonInteraction,
+  ButtonStyle,
   ChatInputCommandInteraction,
   EmbedBuilder,
   GuildMember,
+  LabelBuilder,
   MessageFlags,
+  ModalBuilder,
+  ModalSubmitInteraction,
   SlashCommandBuilder,
   SlashCommandStringOption,
+  TextInputBuilder,
+  TextInputStyle,
 } from "discord.js";
 import { formatContextUsage, runJob } from "../utils/agent/jobLoop.js";
-import { clearPage, getPageInfo } from "../utils/agent/wikiApi.js";
+import {
+  clearPage,
+  getPageInfo,
+  getPageWikitext,
+  publishPage,
+} from "../utils/agent/wikiApi.js";
 import {
   outputTitle,
   pageUrl,
@@ -17,6 +31,8 @@ import {
 } from "../utils/agent/wikis.js";
 
 export const LLM_ENABLED = process.env.LLM_ENABLED === "true";
+
+const AGREE = "I AGREE";
 
 const addWikiOption = (o: SlashCommandStringOption) =>
   o
@@ -76,6 +92,33 @@ function pagesOf(interaction: ChatInputCommandInteraction): {
   };
 }
 
+function pagesFor(userId: string, wikiChoice: string) {
+  const wiki = resolveWiki(wikiChoice);
+  const sessionPage = sessionTitle(wiki, userId);
+  const outputPage = outputTitle(wiki, userId);
+  return {
+    wiki,
+    sessionPage,
+    outputPage,
+    sessionUrl: pageUrl(wiki, sessionPage),
+    outputUrl: pageUrl(wiki, outputPage),
+  };
+}
+
+const TARGET_RE = /<!--\s*aphonos-target:\s*(.+?)\s*-->/i;
+
+export function parseOutputTarget(wikitext: string): {
+  target: string;
+  body: string;
+} | null {
+  const m = wikitext.match(TARGET_RE);
+  if (!m) return null;
+  const target = m[1].trim();
+  const body = wikitext.replace(TARGET_RE, "").replace(/^\s*\n/, "");
+  if (!target || !body.trim()) return null;
+  return { target, body };
+}
+
 async function runSession(
   interaction: ChatInputCommandInteraction,
 ): Promise<void> {
@@ -101,21 +144,19 @@ async function runSession(
     await interaction.editReply({
       embeds: [
         new EmbedBuilder()
-          .setColor(0x2e2b5f)
+          .setColor(0xb9afce)
           .setTitle("Job pages")
           .addFields(
             { name: "Wiki", value: wiki.sitename },
             {
-              name: "Session (notes)",
+              name: "Session",
               value: `${session.exists ? `[${sessionPage}](${sessionUrl})` : `\`${sessionPage}\``} · ${size(session)}`,
             },
             {
-              name: "Output (deliverable)",
+              name: "Output",
               value: `${output.exists ? `[${outputPage}](${outputUrl})` : `\`${outputPage}\``} · ${size(output)}`,
             },
-          )
-          .setFooter({ text: "Use /job clear to wipe the session page" })
-          .setTimestamp(),
+          ),
       ],
     });
   } catch (err) {
@@ -154,7 +195,7 @@ async function runClear(
 
     await clearPage(wiki, sessionPage);
     await interaction.editReply({
-      content: `Cleared [${sessionPage}](${sessionUrl}) (${before.length.toLocaleString()} bytes → empty).`,
+      content: `Cleared [${sessionPage}](${sessionUrl}) (${before.length.toLocaleString()} bytes -> empty).`,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
@@ -206,35 +247,50 @@ async function runTask(
       onProgress,
     });
 
+    const outputText = await getPageWikitext(wiki, outputPage).catch(
+      () => null,
+    );
+    const canApprove =
+      Boolean(outputText?.trim()) && Boolean(parseOutputTarget(outputText!));
+
+    const embed = new EmbedBuilder()
+      .setColor(0xb9afce)
+      .setTitle("Job complete")
+      .setDescription(result.summary.slice(0, 4000))
+      .addFields(
+        { name: "Wiki", value: wiki.sitename, inline: true },
+        { name: "Steps", value: String(result.steps), inline: true },
+        {
+          name: "Context",
+          value: formatContextUsage(
+            result.peakPromptTokens,
+            result.contextLimit,
+          ),
+          inline: true,
+        },
+        {
+          name: "Session",
+          value: `[${result.sessionPage}](${result.sessionUrl})`,
+        },
+        {
+          name: "Output",
+          value: `[${result.outputPage}](${result.outputUrl})`,
+        },
+      );
+
+    const row = canApprove
+      ? new ActionRowBuilder<ButtonBuilder>().addComponents(
+          new ButtonBuilder()
+            .setCustomId(`job:approve:${interaction.user.id}:${wiki.choice}`)
+            .setLabel("Approve")
+            .setStyle(ButtonStyle.Danger),
+        )
+      : undefined;
+
     await interaction.editReply({
       content: "",
-      embeds: [
-        new EmbedBuilder()
-          .setColor(0xb9afce)
-          .setTitle("Job complete")
-          .setDescription(result.summary.slice(0, 4000))
-          .addFields(
-            { name: "Wiki", value: wiki.sitename, inline: true },
-            { name: "Steps", value: String(result.steps), inline: true },
-            {
-              name: "Context",
-              value: formatContextUsage(
-                result.peakPromptTokens,
-                result.contextLimit,
-              ),
-              inline: true,
-            },
-            {
-              name: "Session",
-              value: `[${result.sessionPage}](${result.sessionUrl})`,
-            },
-            {
-              name: "Output",
-              value: `[${result.outputPage}](${result.outputUrl})`,
-            },
-          )
-          .setTimestamp(),
-      ],
+      embeds: [embed],
+      components: row ? [row] : [],
     });
   } catch (err) {
     console.error(`[job ${jobId}]`, err);
@@ -242,6 +298,134 @@ async function runTask(
     await interaction.editReply({
       content: `**Job failed:** ${message.slice(0, 1800)}`,
       embeds: [],
+      components: [],
+    });
+  }
+}
+
+export async function handleJobApproveButton(
+  interaction: ButtonInteraction,
+): Promise<void> {
+  const parts = interaction.customId.split(":");
+  // job:approve:userId:wikiChoice
+  if (parts.length !== 4 || parts[0] !== "job" || parts[1] !== "approve") {
+    return;
+  }
+  const [, , ownerId, wikiChoice] = parts;
+
+  if (interaction.user.id !== ownerId) {
+    await interaction.reply({
+      content: "Only the user who ran this job can approve it.",
+      flags: MessageFlags.Ephemeral,
+    });
+    return;
+  }
+
+  const modal = new ModalBuilder()
+    .setCustomId(`job:approve-modal:${ownerId}:${wikiChoice}`)
+    .setTitle("Confirm publish")
+    .addLabelComponents(
+      new LabelBuilder()
+        .setLabel(`Please type: ${AGREE}`)
+        .setDescription("You accept full liability for this publish")
+        .setTextInputComponent(
+          new TextInputBuilder()
+            .setCustomId("liability")
+            .setPlaceholder(AGREE)
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true)
+            .setMinLength(AGREE.length)
+            .setMaxLength(32),
+        ),
+    );
+
+  await interaction.showModal(modal);
+}
+
+export async function handleJobApproveModal(
+  interaction: ModalSubmitInteraction,
+): Promise<void> {
+  const parts = interaction.customId.split(":");
+  // job:approve-modal:userId:wikiChoice
+  if (
+    parts.length !== 4 ||
+    parts[0] !== "job" ||
+    parts[1] !== "approve-modal"
+  ) {
+    return;
+  }
+  const [, , ownerId, wikiChoice] = parts;
+
+  if (interaction.user.id !== ownerId) {
+    await interaction.reply({
+      content: "Only the user who ran this job can approve it.",
+      flags: MessageFlags.Ephemeral,
+    });
+    return;
+  }
+
+  const typed = interaction.fields.getTextInputValue("liability").trim();
+  if (typed.toUpperCase() !== AGREE) {
+    await interaction.reply({
+      content: `You must type **${AGREE}** exactly to accept liability and publish.`,
+      flags: MessageFlags.Ephemeral,
+    });
+    return;
+  }
+
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+  const { wiki, outputPage } = pagesFor(ownerId, wikiChoice);
+
+  try {
+    const wikitext = await getPageWikitext(wiki, outputPage);
+    if (!wikitext?.trim()) {
+      await interaction.editReply({
+        content: "Output page is empty, there is nothing to publish.",
+      });
+      return;
+    }
+
+    const parsed = parseOutputTarget(wikitext);
+    if (!parsed) {
+      await interaction.editReply({
+        content:
+          "Output needs `<!-- aphonos-target: PageTitle -->` in the wikitext source, plus the page body.",
+      });
+      return;
+    }
+
+    await publishPage(
+      wiki,
+      parsed.target,
+      parsed.body,
+      `Approved by ${interaction.user.tag} (${interaction.user.id}) via /job`,
+    );
+
+    if (interaction.message?.editable) {
+      await interaction.message
+        .edit({
+          components: [
+            new ActionRowBuilder<ButtonBuilder>().addComponents(
+              new ButtonBuilder()
+                .setCustomId("job:approve:done")
+                .setLabel("Published")
+                .setStyle(ButtonStyle.Secondary)
+                .setDisabled(true),
+            ),
+          ],
+        })
+        .catch(() => {});
+    }
+
+    const liveUrl = pageUrl(wiki, parsed.target);
+    await interaction.editReply({
+      content: `Published [${parsed.target}](${liveUrl}).`,
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    await interaction.editReply({
+      content: `**Publish failed:** ${message.slice(0, 1500)}`,
     });
   }
 }

@@ -22,6 +22,21 @@ export async function handleInteraction(
   interaction: Interaction,
   commands: Collection<string, Command>,
 ): Promise<void> {
+  if (interaction.isButton() && interaction.customId.startsWith("job:approve:")) {
+    const { handleJobApproveButton } = await import("../commands/job.js");
+    await handleJobApproveButton(interaction);
+    return;
+  }
+
+  if (
+    interaction.isModalSubmit() &&
+    interaction.customId.startsWith("job:approve-modal:")
+  ) {
+    const { handleJobApproveModal } = await import("../commands/job.js");
+    await handleJobApproveModal(interaction);
+    return;
+  }
+
   if (!interaction.isChatInputCommand()) return;
 
   if (
