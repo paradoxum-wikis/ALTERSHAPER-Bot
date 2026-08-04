@@ -68,7 +68,9 @@ export const data = new SlashCommandBuilder()
       .addBooleanOption((o) =>
         o
           .setName("remove_on_unreact")
-          .setDescription("If true, unreact removes the role (default: true)")
+          .setDescription(
+            "If true, unreact removes the role (defaults to true)",
+          )
           .setRequired(false),
       ),
   )
