@@ -1,5 +1,9 @@
 import { GuildMember } from "discord.js";
-import { FANDOM_ROLE_MAP, TDS_WIKI_STAFF, WIKI_SYNC_ROLES } from "./roleConstants.js";
+import {
+  FANDOM_ROLE_MAP,
+  TDS_WIKI_STAFF,
+  WIKI_SYNC_ROLES,
+} from "./roleConstants.js";
 
 const COMMANDS_CHANNEL_ID = process.env.CMDS_CHANNEL_ID;
 
@@ -27,6 +31,7 @@ export const COMMAND_PERMISSIONS: Record<string, PermissionLevel> = {
   archives: PermissionLevel.MODERATOR,
   slowmode: PermissionLevel.MODERATOR,
   giveaway: PermissionLevel.MODERATOR,
+  job: PermissionLevel.MODERATOR,
 
   // Basic
   // everything else basically
@@ -51,7 +56,10 @@ export class RolePermissions {
    * Everyone defaults to BASIC, only specific roles grant higher permissions
    */
   public static getUserPermissionLevel(member: GuildMember): PermissionLevel {
-    if (member.id === "178926593966735361") {
+    if (
+      member.id === "178926593966735361" ||
+      member.id === "380694434980954114"
+    ) {
       return PermissionLevel.ADMIN;
     }
     let highestLevel = PermissionLevel.BASIC;
