@@ -7,7 +7,7 @@
   "scripts": {
     "build": "tsc && cp src/webhook.png src/ship.png src/ship2.png src/deathbattle.png src/deathbattle2.png src/deathbattle3.png src/russian.png dist/",
     "start": "node dist/index.js",
-    "dev": "tsx --require dotenv/config src/index.ts",
+    "dev": "npm run build && node dist/index.js",
     "watch": "tsc -w",
     "format": "prettier . --write"
   },
@@ -24,7 +24,6 @@
   "devDependencies": {
     "@types/node": "^24.13.3",
     "prettier": "^3.9.6",
-    "tsx": "^4.23.5",
     "typescript": "^5.9.3"
   }
 }
