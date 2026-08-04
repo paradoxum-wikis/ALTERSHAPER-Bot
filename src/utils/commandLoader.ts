@@ -31,6 +31,7 @@ import * as reactionrole from "../commands/reactionrole.js";
 import * as russian from "../commands/russian.js";
 import * as russianstats from "../commands/russianstats.js";
 import * as interchat from "../commands/interchat.js";
+import * as job from "../commands/job.js";
 
 export interface Command {
   data: unknown;
@@ -73,6 +74,7 @@ export function loadCommands(): Collection<string, Command> {
     russian,
     russianstats,
     interchat,
+    ...(job.LLM_ENABLED ? [job] : []),
   ];
 
   for (const command of commandModules) {

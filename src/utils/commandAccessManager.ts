@@ -20,6 +20,7 @@ const RESTRICTED_COMMANDS: string[] = [
   "removelink",
   "removesin",
   "anime",
+  "job",
 ];
 
 export class CommandAccessManager {
