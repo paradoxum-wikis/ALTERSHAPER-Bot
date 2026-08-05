@@ -11,7 +11,10 @@ function mergeCookies(existing: string, response: Response): string {
         : [];
 
   const map = new Map<string, string>();
-  for (const pair of existing.split(";").map((s) => s.trim()).filter(Boolean)) {
+  for (const pair of existing
+    .split(";")
+    .map((s) => s.trim())
+    .filter(Boolean)) {
     const i = pair.indexOf("=");
     if (i > 0) map.set(pair.slice(0, i), pair.slice(i + 1));
   }
@@ -57,9 +60,8 @@ async function login(apiBase: string): Promise<string> {
     type: "login",
     format: "json",
   });
-  const logintoken = (
-    tokenRes.json.query as { tokens: { logintoken: string } }
-  ).tokens.logintoken;
+  const logintoken = (tokenRes.json.query as { tokens: { logintoken: string } })
+    .tokens.logintoken;
 
   const loginRes = await post(
     apiBase,
@@ -167,9 +169,8 @@ async function edit(
     },
     cookie,
   );
-  const csrftoken = (
-    tokenRes.json.query as { tokens: { csrftoken: string } }
-  ).tokens.csrftoken;
+  const csrftoken = (tokenRes.json.query as { tokens: { csrftoken: string } })
+    .tokens.csrftoken;
 
   const editRes = await post(
     wiki.apiBase,
@@ -202,3 +203,113 @@ export const publishPage = (
   text: string,
   summary: string,
 ) => edit(wiki, title, text, summary);
+
+export interface CompareResult {
+  fromSize: number;
+  toSize: number;
+  diffSize: number;
+  text: string;
+}
+
+export async function compareToText(
+  wiki: WikiConfig,
+  title: string,
+  toText: string,
+): Promise<CompareResult> {
+  const params = new URLSearchParams({
+    action: "compare",
+    fromtitle: title,
+    toslots: "main",
+    "totext-main": toText,
+    prop: "diff|diffsize|size",
+    format: "json",
+    formatversion: "2",
+  });
+
+  const res = await fetch(wiki.apiBase, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: params,
+  });
+  if (!res.ok) throw new Error(`Wiki API ${res.status}`);
+  const data = (await res.json()) as {
+    error?: { code?: string; info?: string };
+    compare?: {
+      body?: string;
+      fromsize?: number;
+      tosize?: number;
+      diffsize?: number;
+    };
+  };
+
+  if (data.error?.code === "missingtitle") {
+    return {
+      fromSize: 0,
+      toSize: Buffer.byteLength(toText, "utf8"),
+      diffSize: Buffer.byteLength(toText, "utf8"),
+      text: toText
+        .split(/\r?\n/)
+        .map((l) => `+ ${l}`)
+        .join("\n"),
+    };
+  }
+  if (data.error) {
+    throw new Error(data.error.info ?? data.error.code ?? "compare failed");
+  }
+
+  const c = data.compare;
+  if (!c) throw new Error("No compare result");
+
+  return {
+    fromSize: c.fromsize ?? 0,
+    toSize: c.tosize ?? Buffer.byteLength(toText, "utf8"),
+    diffSize: c.diffsize ?? 0,
+    text: c.body ? htmlDiffToText(c.body) : "(no diff body)",
+  };
+}
+
+function htmlDiffToText(html: string): string {
+  const decode = (s: string) =>
+    s
+      .replace(/&#x([0-9a-fA-F]+);/g, (_, h) =>
+        String.fromCodePoint(parseInt(h, 16)),
+      )
+      .replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(parseInt(d, 10)))
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .replace(/&amp;/g, "&")
+      .replace(/&quot;/g, '"')
+      .replace(/&nbsp;/g, " ");
+
+  const strip = (s: string) => decode(s.replace(/<[^>]+>/g, "")).trim();
+  const lines: string[] = [];
+  const rowRe = /<tr\b[^>]*>([\s\S]*?)<\/tr>/gi;
+  let row: RegExpExecArray | null;
+  while ((row = rowRe.exec(html))) {
+    const cells: { className: string; inner: string }[] = [];
+    const cellRe = /<td\b([^>]*)>([\s\S]*?)<\/td>/gi;
+    let cell: RegExpExecArray | null;
+    while ((cell = cellRe.exec(row[1]))) {
+      const cm = cell[1].match(/class\s*=\s*"([^"]*)"/i);
+      cells.push({ className: cm?.[1] ?? "", inner: cell[2] });
+    }
+    const find = (frag: string) =>
+      cells.find((c) => c.className.includes(frag));
+    const lineno = find("diff-lineno");
+    if (lineno) {
+      const m = strip(lineno.inner).match(/Line\s+(\d+)/i);
+      if (m) lines.push(`@@ ${m[1]} @@`);
+      continue;
+    }
+    const ctx = find("diff-context");
+    if (ctx) {
+      lines.push(`  ${strip(ctx.inner)}`);
+      continue;
+    }
+    const del = find("diff-deletedline");
+    const add = find("diff-addedline");
+    if (del) lines.push(`- ${strip(del.inner)}`);
+    if (add) lines.push(`+ ${strip(add.inner)}`);
+  }
+  return lines.join("\n");
+}

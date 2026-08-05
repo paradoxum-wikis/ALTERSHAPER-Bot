@@ -18,6 +18,7 @@ import {
 import { formatContextUsage, runJob } from "../utils/agent/jobLoop.js";
 import {
   clearPage,
+  compareToText,
   getPageInfo,
   getPageWikitext,
   publishPage,
@@ -281,6 +282,10 @@ async function runTask(
     const row = canApprove
       ? new ActionRowBuilder<ButtonBuilder>().addComponents(
           new ButtonBuilder()
+            .setCustomId(`job:diff:${interaction.user.id}:${wiki.choice}`)
+            .setLabel("Diff")
+            .setStyle(ButtonStyle.Secondary),
+          new ButtonBuilder()
             .setCustomId(`job:approve:${interaction.user.id}:${wiki.choice}`)
             .setLabel("Approve")
             .setStyle(ButtonStyle.Danger),
@@ -303,15 +308,82 @@ async function runTask(
   }
 }
 
+function parseJobButtonId(customId: string): {
+  kind: string;
+  ownerId: string;
+  wikiChoice: string;
+} | null {
+  const parts = customId.split(":");
+  if (parts.length !== 4 || parts[0] !== "job") return null;
+  return { kind: parts[1], ownerId: parts[2], wikiChoice: parts[3] };
+}
+
+export async function handleJobDiffButton(
+  interaction: ButtonInteraction,
+): Promise<void> {
+  const id = parseJobButtonId(interaction.customId);
+  if (!id || id.kind !== "diff") return;
+
+  if (interaction.user.id !== id.ownerId) {
+    await interaction.reply({
+      content: "Only the user who ran this job can view the diff.",
+      flags: MessageFlags.Ephemeral,
+    });
+    return;
+  }
+
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+  const { wiki, outputPage } = pagesFor(id.ownerId, id.wikiChoice);
+
+  try {
+    const wikitext = await getPageWikitext(wiki, outputPage);
+    if (!wikitext?.trim()) {
+      await interaction.editReply({ content: "Output page is empty." });
+      return;
+    }
+    const parsed = parseOutputTarget(wikitext);
+    if (!parsed) {
+      await interaction.editReply({
+        content:
+          "Output needs `<!-- aphonos-target: PageTitle -->` plus the page body.",
+      });
+      return;
+    }
+
+    const cmp = await compareToText(wiki, parsed.target, parsed.body);
+    const delta = cmp.toSize - cmp.fromSize;
+    const deltaStr = `${delta >= 0 ? "+" : ""}${delta} bytes`;
+    let body = cmp.text || "(no changes)";
+    if (body.length > 3500) {
+      body = `${body.slice(0, 3500)}\n…truncated`;
+    }
+
+    await interaction.editReply({
+      embeds: [
+        new EmbedBuilder()
+          .setColor(0xb9afce)
+          .setTitle(`Diff → ${parsed.target}`)
+          .setDescription(`\`\`\`diff\n${body}\n\`\`\``.slice(0, 4096))
+          .addFields({
+            name: "Size",
+            value: `${cmp.fromSize} → ${cmp.toSize} (${deltaStr})`,
+          }),
+      ],
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    await interaction.editReply({
+      content: `**Diff failed:** ${message.slice(0, 1500)}`,
+    });
+  }
+}
+
 export async function handleJobApproveButton(
   interaction: ButtonInteraction,
 ): Promise<void> {
-  const parts = interaction.customId.split(":");
-  // job:approve:userId:wikiChoice
-  if (parts.length !== 4 || parts[0] !== "job" || parts[1] !== "approve") {
-    return;
-  }
-  const [, , ownerId, wikiChoice] = parts;
+  const id = parseJobButtonId(interaction.customId);
+  if (!id || id.kind !== "approve") return;
+  const { ownerId, wikiChoice } = id;
 
   if (interaction.user.id !== ownerId) {
     await interaction.reply({
@@ -403,19 +475,7 @@ export async function handleJobApproveModal(
     );
 
     if (interaction.message?.editable) {
-      await interaction.message
-        .edit({
-          components: [
-            new ActionRowBuilder<ButtonBuilder>().addComponents(
-              new ButtonBuilder()
-                .setCustomId("job:approve:done")
-                .setLabel("Published")
-                .setStyle(ButtonStyle.Secondary)
-                .setDisabled(true),
-            ),
-          ],
-        })
-        .catch(() => {});
+      await interaction.message.edit({ components: [] }).catch(() => {});
     }
 
     const liveUrl = pageUrl(wiki, parsed.target);

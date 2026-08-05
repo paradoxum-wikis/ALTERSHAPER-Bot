@@ -22,10 +22,17 @@ export async function handleInteraction(
   interaction: Interaction,
   commands: Collection<string, Command>,
 ): Promise<void> {
-  if (interaction.isButton() && interaction.customId.startsWith("job:approve:")) {
-    const { handleJobApproveButton } = await import("../commands/job.js");
-    await handleJobApproveButton(interaction);
-    return;
+  if (interaction.isButton()) {
+    if (interaction.customId.startsWith("job:diff:")) {
+      const { handleJobDiffButton } = await import("../commands/job.js");
+      await handleJobDiffButton(interaction);
+      return;
+    }
+    if (interaction.customId.startsWith("job:approve:")) {
+      const { handleJobApproveButton } = await import("../commands/job.js");
+      await handleJobApproveButton(interaction);
+      return;
+    }
   }
 
   if (
