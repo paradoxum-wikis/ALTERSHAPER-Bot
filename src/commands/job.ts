@@ -387,7 +387,7 @@ async function runTask(
     }
 
     await interaction.editReply({
-      content: "",
+      content: `${interaction.user}`,
       embeds: [embed],
       components,
     });
@@ -395,7 +395,7 @@ async function runTask(
     console.error(`[job ${jobId}]`, err);
     const message = err instanceof Error ? err.message : String(err);
     await interaction.editReply({
-      content: `**Job failed:** ${message.slice(0, 1800)}`,
+      content: `${interaction.user} **Job failed:** ${message.slice(0, 1800)}`,
       embeds: [],
       components: [],
     });
