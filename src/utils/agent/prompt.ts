@@ -12,20 +12,20 @@ export function systemPrompt(
 ): string {
   const mos = MOS[wiki.choice];
   return [
-    `You are a wiki maintenance agent for ${wiki.sitename}.`,
-    `Only write under:`,
-    `- Session \`${sessionPage}\` for notes and prior context (get-page at start if it exists)`,
-    `- Output \`${outputPage}\` for pure JSON (draft index)`,
-    `- Drafts \`${outputPage}/<id>\` for one full proposed page each`,
-    `Never edit live pages besides your own user subpages.`,
+    `You are a wiki maintenance agent for ${wiki.sitename}. Job wiki: \`${wiki.mcpKey}\`.`,
+    `Writes only on that wiki under:`,
+    `- Session \`${sessionPage}\` (notes; get-page at start if it exists)`,
+    `- Output \`${outputPage}\` (JSON index)`,
+    `- Drafts \`${outputPage}/<id>\` (full proposed page each)`,
+    `Never edit live pages besides your own user subpages. Bot handles apply/reject status after review.`,
+    `Docs (read-only, wiki= on tools): \`community.fandom.com\` (General wikitext and Fandom specific extensions), \`www.mediawiki.org\` (detailed wikitext, extensions, etc.). Use when unsure.`,
     `Output schema: {"drafts":[{"id":"shortId","jobId":"thisJobId","target":"Exact Page Title","status":"pending"}]}`,
-    `Each draft: short unique id (4–8 alphanum), jobId exactly as given in the user message, target = live title. Draft page is \`${outputPage}/<id>\`. Same target may use multiple ids.`,
-    `Statuses you write: pending only. applied/rejected (+ reason) are set by the bot after review.`,
-    `get-page Output first; keep existing drafts and append yours. Write each draft page, then write Output JSON.`,
-    `Each draft starts with \`<!-- aphonos-target: Exact Page Title -->\` then the full replacement wikitext.`,
+    `Drafts: short unique id, jobId from user message, page at \`${outputPage}/<id>\`. Same target may have multiple ids. You only write status pending.`,
+    `get-page Output first; keep existing drafts; write draft pages then Output JSON.`,
+    `Each draft starts with \`<!-- aphonos-target: Exact Page Title -->\` then full replacement wikitext.`,
     `If a page uses Neow templates, read Help:Neowtext first.`,
     mos ? `Follow the manual of style: ${mos}.` : "",
-    `Short Q&A may be Discord-only. End with a concise Discord summary, and mention Output if you wrote drafts.`,
+    `Short Q&A may be Discord-only. End with a concise Discord summary; mention Output if you wrote drafts.`,
   ]
     .filter(Boolean)
     .join("\n");
@@ -44,7 +44,7 @@ export function userPrompt(
     `Drafts: \`${outputPage}/<id>\``,
     `Job id: \`${jobId}\``,
     isContinue
-      ? `Continue job \`${jobId}\`: read its drafts in Output. For status rejected, fix the draft using reason, then set status pending and clear reason. Keep jobId \`${jobId}\`.`
+      ? `Continue this job: use its drafts in Output. For status rejected, fix the draft using reason, then set status pending and clear reason. Keep jobId \`${jobId}\.`
       : "",
     ``,
     `Task: ${task}`,

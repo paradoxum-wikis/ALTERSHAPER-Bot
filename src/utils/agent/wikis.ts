@@ -43,6 +43,11 @@ const WIKIS = {
   }
 >;
 
+export const DOC_MCP_KEYS = [
+  "community.fandom.com",
+  "www.mediawiki.org",
+] as const;
+
 export function mcpServerConfig() {
   const wikis: Record<string, object> = {};
   for (const w of Object.values(WIKIS)) {
@@ -53,10 +58,26 @@ export function mcpServerConfig() {
       scriptpath: "/",
       username: "${WIKI_BOT_USERNAME}",
       password: "${WIKI_BOT_PASSWORD}",
-      private: false,
       attributeEdits: false,
     };
   }
+  wikis["community.fandom.com"] = {
+    sitename: "Community Central",
+    server: "https://community.fandom.com",
+    articlepath: "/wiki",
+    scriptpath: "/",
+    username: "${WIKI_BOT_USERNAME}",
+    password: "${WIKI_BOT_PASSWORD}",
+    readOnly: true,
+    attributeEdits: false,
+  };
+  wikis["www.mediawiki.org"] = {
+    sitename: "MediaWiki",
+    server: "https://www.mediawiki.org",
+    articlepath: "/wiki",
+    scriptpath: "/w",
+    readOnly: true,
+  };
   return {
     allowWikiManagement: false,
     defaultWiki: WIKIS.tds.mcpKey,

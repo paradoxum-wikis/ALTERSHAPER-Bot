@@ -1,7 +1,7 @@
 import type { ChatCompletionTool } from "openai/resources/chat/completions";
 import type { FunctionParameters } from "openai/resources/shared";
 import type { WikiConfig } from "./wikis.js";
-import { isWritablePage } from "./wikis.js";
+import { DOC_MCP_KEYS, isWritablePage } from "./wikis.js";
 
 const ALLOWED = new Set([
   "get-page",
@@ -54,18 +54,32 @@ export function prepareToolArgs(
     return { ok: false, error: "Invalid JSON arguments" };
   }
 
-  args.wiki = wiki.mcpKey;
-
   if (WRITE.has(name)) {
+    args.wiki = wiki.mcpKey;
     const title = String(args.title ?? "");
     if (!title || !isWritablePage(wiki, title)) {
       return {
         ok: false,
-        error: `Writes limited to ${wiki.sessionPrefix}/ or ${wiki.outputPrefix}/ (got: ${title || "(empty)"})`,
+        error: `Writes limited to ${wiki.sessionPrefix}/ or ${wiki.outputPrefix}/ on ${wiki.mcpKey} (got: ${title || "(empty)"})`,
       };
     }
     args.bot = true;
+    return { ok: true, args };
   }
 
+  const raw =
+    args.wiki != null && String(args.wiki).trim()
+      ? String(args.wiki).replace(/^mcp:\/\/wikis\//, "").replace(/\/$/, "")
+      : wiki.mcpKey;
+  if (
+    raw !== wiki.mcpKey &&
+    !(DOC_MCP_KEYS as readonly string[]).includes(raw)
+  ) {
+    return {
+      ok: false,
+      error: `wiki must be ${wiki.mcpKey} or docs (${DOC_MCP_KEYS.join(", ")}); got ${raw}`,
+    };
+  }
+  args.wiki = raw;
   return { ok: true, args };
 }
