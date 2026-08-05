@@ -324,14 +324,6 @@ export async function handleJobDiffButton(
   const id = parseJobButtonId(interaction.customId);
   if (!id || id.kind !== "diff") return;
 
-  if (interaction.user.id !== id.ownerId) {
-    await interaction.reply({
-      content: "Only the user who ran this job can view the diff.",
-      flags: MessageFlags.Ephemeral,
-    });
-    return;
-  }
-
   await interaction.deferReply({ flags: MessageFlags.Ephemeral });
   const { wiki, outputPage } = pagesFor(id.ownerId, id.wikiChoice);
 
