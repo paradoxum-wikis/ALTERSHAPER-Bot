@@ -26,8 +26,9 @@ import {
   getPageInfo,
   getPageWikitext,
   listSubpages,
-  publishPage,
+  publishAndApply,
   setDraftStatus,
+  type OutputDraft,
 } from "../utils/agent/wikiApi.js";
 import {
   comparePagesUrl,
@@ -41,15 +42,9 @@ import {
 export const LLM_ENABLED = process.env.LLM_ENABLED === "true";
 
 const AGREE = "I AGREE";
+const TARGET_RE = /<!--\s*aphonos-target:\s*(.+?)\s*-->/i;
 
-type Proposal = {
-  id: string;
-  jobId: string;
-  draftTitle: string;
-  target: string;
-  status: "pending" | "applied" | "rejected";
-  reason?: string;
-};
+type Proposal = OutputDraft & { draftTitle: string };
 
 const addWikiOption = (o: SlashCommandStringOption) =>
   o
@@ -101,13 +96,6 @@ export const data = new SlashCommandBuilder()
       .addStringOption(addWikiOption),
   );
 
-function pagesOf(interaction: ChatInputCommandInteraction) {
-  return pagesFor(
-    interaction.user.id,
-    interaction.options.getString("wiki") ?? "tds",
-  );
-}
-
 function pagesFor(userId: string, wikiChoice: string) {
   const wiki = resolveWiki(wikiChoice);
   const sessionPage = sessionTitle(wiki, userId);
@@ -121,7 +109,12 @@ function pagesFor(userId: string, wikiChoice: string) {
   };
 }
 
-const TARGET_RE = /<!--\s*aphonos-target:\s*(.+?)\s*-->/i;
+function pagesOf(interaction: ChatInputCommandInteraction) {
+  return pagesFor(
+    interaction.user.id,
+    interaction.options.getString("wiki") ?? "tds",
+  );
+}
 
 export function parseOutputTarget(wikitext: string): {
   target: string;
@@ -148,26 +141,14 @@ async function listProposals(
         (opts.all || d.status === "pending") &&
         (!opts.jobId || d.jobId === opts.jobId),
     )
-    .map((d) => ({
-      id: d.id,
-      jobId: d.jobId,
-      draftTitle: `${outputRoot}/${d.id}`,
-      target: d.target,
-      status: d.status,
-      reason: d.reason,
-    }));
+    .map((d) => ({ ...d, draftTitle: `${outputRoot}/${d.id}` }));
 }
 
 async function loadProposal(
   wiki: WikiConfig,
   outputRoot: string,
   draftId: string,
-): Promise<{
-  id: string;
-  target: string;
-  body: string;
-  draftTitle: string;
-} | null> {
+) {
   const item = (await getOutputIndex(wiki, outputRoot)).drafts.find(
     (d) => d.id === draftId,
   );
@@ -202,7 +183,7 @@ function actionButtons(ownerId: string, wikiChoice: string, draftId: string) {
   );
 }
 
-function continueButton(ownerId: string, wikiChoice: string, jobId: string) {
+function continueRow(ownerId: string, wikiChoice: string, jobId: string) {
   return new ActionRowBuilder<ButtonBuilder>().addComponents(
     new ButtonBuilder()
       .setCustomId(`job:continue:${ownerId}:${wikiChoice}:${jobId}`)
@@ -215,19 +196,48 @@ function newJobId() {
   return `${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
 }
 
-type JobReply = ChatInputCommandInteraction | ModalSubmitInteraction;
+function missingAgentEnv() {
+  return [
+    "LLM_API_KEY",
+    "LLM_BASE_URL",
+    "LLM_MODEL",
+    "WIKI_BOT_USERNAME",
+    "WIKI_BOT_PASSWORD",
+  ].filter((k) => !process.env[k]);
+}
+
+/**
+ * customId: job:<kind>:<ownerId>:<wikiChoice>:<key>
+ */
+function parseCid(customId: string) {
+  const [ns, kind, ownerId, wikiChoice, ...rest] = customId.split(":");
+  if (ns !== "job" || !kind || !ownerId || !wikiChoice) return null;
+  return { kind, ownerId, wikiChoice, key: rest.join(":") };
+}
+
+async function denyUnlessOwner(
+  interaction: ButtonInteraction | ModalSubmitInteraction,
+  ownerId: string,
+) {
+  if (interaction.user.id === ownerId) return false;
+  await interaction.reply({
+    content: "Only the user who ran this job can do that.",
+    flags: MessageFlags.Ephemeral,
+  });
+  return true;
+}
 
 async function runAgentJob(opts: {
-  interaction: JobReply;
+  interaction: ChatInputCommandInteraction | ModalSubmitInteraction;
   userId: string;
   wikiChoice: string;
   task: string;
   jobId: string;
-  isContinue: boolean;
+  isContinue?: boolean;
   thinking: boolean;
-}): Promise<void> {
-  const { interaction, userId, wikiChoice, task, jobId, isContinue, thinking } =
-    opts;
+}) {
+  const { interaction, userId, wikiChoice, task, jobId, thinking } = opts;
+  const isContinue = !!opts.isContinue;
   const { wiki, sessionPage, outputPage } = pagesFor(userId, wikiChoice);
 
   let lastEdit = 0;
@@ -235,7 +245,9 @@ async function runAgentJob(opts: {
     const now = Date.now();
     if (now - lastEdit < 2000) return;
     lastEdit = now;
-    await interaction.editReply({ content: msg, embeds: [] }).catch(() => {});
+    await interaction
+      .editReply({ content: msg, embeds: [] })
+      .catch((err) => console.error("[job] progress editReply", err));
   };
 
   try {
@@ -250,9 +262,7 @@ async function runAgentJob(opts: {
       onProgress,
     });
 
-    const proposals = await listProposals(wiki, outputPage, { jobId }).catch(
-      () => [],
-    );
+    const proposals = await listProposals(wiki, outputPage, { jobId });
 
     const embed = new EmbedBuilder()
       .setColor(0xb9afce)
@@ -325,7 +335,7 @@ async function runAgentJob(opts: {
         ),
       );
     }
-    components.push(continueButton(userId, wiki.choice, jobId));
+    components.push(continueRow(userId, wiki.choice, jobId));
 
     await interaction.editReply({
       content: `${interaction.user}`,
@@ -343,19 +353,7 @@ async function runAgentJob(opts: {
   }
 }
 
-function missingAgentEnv(): string[] {
-  return [
-    "LLM_API_KEY",
-    "LLM_BASE_URL",
-    "LLM_MODEL",
-    "WIKI_BOT_USERNAME",
-    "WIKI_BOT_PASSWORD",
-  ].filter((k) => !process.env[k]);
-}
-
-async function runSession(
-  interaction: ChatInputCommandInteraction,
-): Promise<void> {
+async function runSession(interaction: ChatInputCommandInteraction) {
   if (!process.env.WIKI_BOT_USERNAME) {
     await interaction.reply({
       content: "**Missing** `WIKI_BOT_USERNAME`.",
@@ -401,7 +399,7 @@ async function runSession(
                           p.status === "rejected" && p.reason
                             ? ` — ${p.reason}`
                             : "";
-                        return `• [${p.target}](${pageUrl(wiki, p.draftTitle)}) \`${p.id}\` - job \`${p.jobId}\` - ${p.status}${reason}`;
+                        return `• [${p.target}](${pageUrl(wiki, p.draftTitle)}) \`${p.id}\` · job \`${p.jobId}\` · ${p.status}${reason}`;
                       })
                       .join("\n")
                       .slice(0, 1024)
@@ -418,9 +416,7 @@ async function runSession(
   }
 }
 
-async function runClear(
-  interaction: ChatInputCommandInteraction,
-): Promise<void> {
+async function runClear(interaction: ChatInputCommandInteraction) {
   if (!process.env.WIKI_BOT_USERNAME || !process.env.WIKI_BOT_PASSWORD) {
     await interaction.reply({
       content: "**Missing** `WIKI_BOT_USERNAME` / `WIKI_BOT_PASSWORD`.",
@@ -447,9 +443,7 @@ async function runClear(
   }
 }
 
-async function runTask(
-  interaction: ChatInputCommandInteraction,
-): Promise<void> {
+async function runTask(interaction: ChatInputCommandInteraction) {
   const needed = missingAgentEnv();
   if (needed.length) {
     await interaction.reply({
@@ -459,85 +453,56 @@ async function runTask(
     return;
   }
 
-  const task = interaction.options.getString("task", true);
-  const thinking = interaction.options.getBoolean("thinking") ?? true;
   const existing = interaction.options.getString("job")?.trim();
-  const jobId = existing || newJobId();
-
   await interaction.deferReply();
   await runAgentJob({
     interaction,
     userId: interaction.user.id,
     wikiChoice: interaction.options.getString("wiki") ?? "tds",
-    task,
-    jobId,
+    task: interaction.options.getString("task", true),
+    jobId: existing || newJobId(),
     isContinue: !!existing,
-    thinking,
+    thinking: interaction.options.getBoolean("thinking") ?? true,
   });
 }
 
-export async function handleJobContinueButton(
-  interaction: ButtonInteraction,
-): Promise<void> {
-  const id = parseJobId(interaction.customId);
-  if (!id || id.kind !== "continue" || !id.draftId) return;
+export async function handleJobContinueButton(interaction: ButtonInteraction) {
+  const id = parseCid(interaction.customId);
+  if (!id || id.kind !== "continue" || !id.key) return;
+  if (await denyUnlessOwner(interaction, id.ownerId)) return;
 
-  if (interaction.user.id !== id.ownerId) {
-    await interaction.reply({
-      content: "Only the user who ran this job can continue it.",
-      flags: MessageFlags.Ephemeral,
-    });
-    return;
-  }
-
-  const modal = new ModalBuilder()
-    .setCustomId(
-      `job:continue-modal:${id.ownerId}:${id.wikiChoice}:${id.draftId}`,
-    )
-    .setTitle("Continue job")
-    .addLabelComponents(
-      new LabelBuilder()
-        .setLabel("Follow-up task")
-        .setTextInputComponent(
-          new TextInputBuilder()
-            .setCustomId("task")
-            .setStyle(TextInputStyle.Paragraph)
-            .setRequired(true)
-            .setMinLength(1)
-            .setMaxLength(2000),
-        ),
-    );
-
-  await interaction.showModal(modal);
+  await interaction.showModal(
+    new ModalBuilder()
+      .setCustomId(
+        `job:continue-modal:${id.ownerId}:${id.wikiChoice}:${id.key}`,
+      )
+      .setTitle("Continue job")
+      .addLabelComponents(
+        new LabelBuilder()
+          .setLabel("Follow-up task")
+          .setTextInputComponent(
+            new TextInputBuilder()
+              .setCustomId("task")
+              .setStyle(TextInputStyle.Paragraph)
+              .setRequired(true)
+              .setMinLength(1)
+              .setMaxLength(2000),
+          ),
+      ),
+  );
 }
 
 export async function handleJobContinueModal(
   interaction: ModalSubmitInteraction,
-): Promise<void> {
-  const id = parseJobId(interaction.customId);
-  if (!id || id.kind !== "continue-modal" || !id.draftId) return;
-
-  if (interaction.user.id !== id.ownerId) {
-    await interaction.reply({
-      content: "Only the user who ran this job can continue it.",
-      flags: MessageFlags.Ephemeral,
-    });
-    return;
-  }
+) {
+  const id = parseCid(interaction.customId);
+  if (!id || id.kind !== "continue-modal" || !id.key) return;
+  if (await denyUnlessOwner(interaction, id.ownerId)) return;
 
   const needed = missingAgentEnv();
   if (needed.length) {
     await interaction.reply({
       content: `**Job agent is not configured** (missing: ${needed.join(", ")}).`,
-      flags: MessageFlags.Ephemeral,
-    });
-    return;
-  }
-
-  const task = interaction.fields.getTextInputValue("task").trim();
-  if (!task) {
-    await interaction.reply({
-      content: "Task cannot be empty.",
       flags: MessageFlags.Ephemeral,
     });
     return;
@@ -548,40 +513,24 @@ export async function handleJobContinueModal(
     interaction,
     userId: id.ownerId,
     wikiChoice: id.wikiChoice,
-    task,
-    jobId: id.draftId,
+    task: interaction.fields.getTextInputValue("task").trim(),
+    jobId: id.key,
     isContinue: true,
     thinking: true,
   });
 }
 
-function parseJobId(customId: string): {
-  kind: string;
-  ownerId: string;
-  wikiChoice: string;
-  draftId: string;
-} | null {
-  const parts = customId.split(":");
-  if (parts[0] !== "job" || parts.length < 4) return null;
-  return {
-    kind: parts[1],
-    ownerId: parts[2],
-    wikiChoice: parts[3],
-    draftId: parts.slice(4).join(":"),
-  };
-}
-
 export async function handleJobPickMenu(
   interaction: StringSelectMenuInteraction,
-): Promise<void> {
-  const id = parseJobId(interaction.customId);
+) {
+  const id = parseCid(interaction.customId);
   if (!id || id.kind !== "pick") return;
 
   const draftId = interaction.values[0];
   if (!draftId) return;
 
   const { wiki, outputPage } = pagesFor(id.ownerId, id.wikiChoice);
-  const p = (await listProposals(wiki, outputPage).catch(() => [])).find(
+  const p = (await listProposals(wiki, outputPage)).find(
     (x) => x.id === draftId,
   );
   if (!p) {
@@ -603,21 +552,19 @@ export async function handleJobPickMenu(
         );
 
   await interaction.reply({
-    content: `**${p.target}** - [draft](${pageUrl(wiki, p.draftTitle)})`,
+    content: `**${p.target}** · [draft](${pageUrl(wiki, p.draftTitle)})`,
     components: [row],
     flags: MessageFlags.Ephemeral,
   });
 }
 
-export async function handleJobDiffButton(
-  interaction: ButtonInteraction,
-): Promise<void> {
-  const id = parseJobId(interaction.customId);
-  if (!id || id.kind !== "diff" || !id.draftId) return;
+export async function handleJobDiffButton(interaction: ButtonInteraction) {
+  const id = parseCid(interaction.customId);
+  if (!id || id.kind !== "diff" || !id.key) return;
 
   await interaction.deferReply({ flags: MessageFlags.Ephemeral });
   const { wiki, outputPage } = pagesFor(id.ownerId, id.wikiChoice);
-  const proposal = await loadProposal(wiki, outputPage, id.draftId);
+  const proposal = await loadProposal(wiki, outputPage, id.key);
   if (!proposal) {
     await interaction.editReply({ content: "Draft not found." });
     return;
@@ -655,56 +602,38 @@ export async function handleJobDiffButton(
   }
 }
 
-export async function handleJobApproveButton(
-  interaction: ButtonInteraction,
-): Promise<void> {
-  const id = parseJobId(interaction.customId);
-  if (!id || id.kind !== "approve" || !id.draftId) return;
+export async function handleJobApproveButton(interaction: ButtonInteraction) {
+  const id = parseCid(interaction.customId);
+  if (!id || id.kind !== "approve" || !id.key) return;
+  if (await denyUnlessOwner(interaction, id.ownerId)) return;
 
-  if (interaction.user.id !== id.ownerId) {
-    await interaction.reply({
-      content: "Only the user who ran this job can approve it.",
-      flags: MessageFlags.Ephemeral,
-    });
-    return;
-  }
-
-  const modal = new ModalBuilder()
-    .setCustomId(
-      `job:approve-modal:${id.ownerId}:${id.wikiChoice}:${id.draftId}`,
-    )
-    .setTitle("Confirm publish")
-    .addLabelComponents(
-      new LabelBuilder()
-        .setLabel(`Please type: '${AGREE}'`)
-        .setDescription("You accept full liability for this publish")
-        .setTextInputComponent(
-          new TextInputBuilder()
-            .setCustomId("liability")
-            .setPlaceholder(AGREE)
-            .setStyle(TextInputStyle.Short)
-            .setRequired(true)
-            .setMinLength(AGREE.length)
-            .setMaxLength(32),
-        ),
-    );
-
-  await interaction.showModal(modal);
+  await interaction.showModal(
+    new ModalBuilder()
+      .setCustomId(`job:approve-modal:${id.ownerId}:${id.wikiChoice}:${id.key}`)
+      .setTitle("Confirm publish")
+      .addLabelComponents(
+        new LabelBuilder()
+          .setLabel(`Please type: '${AGREE}'`)
+          .setDescription("You accept full liability for this publish")
+          .setTextInputComponent(
+            new TextInputBuilder()
+              .setCustomId("liability")
+              .setPlaceholder(AGREE)
+              .setStyle(TextInputStyle.Short)
+              .setRequired(true)
+              .setMinLength(AGREE.length)
+              .setMaxLength(32),
+          ),
+      ),
+  );
 }
 
 export async function handleJobApproveModal(
   interaction: ModalSubmitInteraction,
-): Promise<void> {
-  const id = parseJobId(interaction.customId);
-  if (!id || id.kind !== "approve-modal" || !id.draftId) return;
-
-  if (interaction.user.id !== id.ownerId) {
-    await interaction.reply({
-      content: "Only the user who ran this job can approve it.",
-      flags: MessageFlags.Ephemeral,
-    });
-    return;
-  }
+) {
+  const id = parseCid(interaction.customId);
+  if (!id || id.kind !== "approve-modal" || !id.key) return;
+  if (await denyUnlessOwner(interaction, id.ownerId)) return;
 
   const typed = interaction.fields.getTextInputValue("liability").trim();
   if (typed.toUpperCase() !== AGREE) {
@@ -719,27 +648,22 @@ export async function handleJobApproveModal(
   const { wiki, outputPage } = pagesFor(id.ownerId, id.wikiChoice);
 
   try {
-    const proposal = await loadProposal(wiki, outputPage, id.draftId);
+    const proposal = await loadProposal(wiki, outputPage, id.key);
     if (!proposal) {
       await interaction.editReply({ content: "Draft not found." });
       return;
     }
 
-    await publishPage(
-      wiki,
-      proposal.target,
-      proposal.body,
-      `Approved by ${interaction.user.tag} (${interaction.user.id}) via /job`,
-    );
-    await setDraftStatus(wiki, outputPage, proposal.id, "applied");
+    await publishAndApply(wiki, {
+      target: proposal.target,
+      body: proposal.body,
+      summary: `Approved by ${interaction.user.tag} (${interaction.user.id}) via /job`,
+      indexTitle: outputPage,
+      draftId: proposal.id,
+    });
 
-    if (interaction.message?.editable) {
-      await interaction.message.edit({ components: [] }).catch(() => {});
-    }
-
-    const liveUrl = pageUrl(wiki, proposal.target);
     await interaction.editReply({
-      content: `Published [${proposal.target}](${liveUrl}).`,
+      content: `Published [${proposal.target}](${pageUrl(wiki, proposal.target)}).`,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
@@ -749,83 +673,54 @@ export async function handleJobApproveModal(
   }
 }
 
-export async function handleJobRejectButton(
-  interaction: ButtonInteraction,
-): Promise<void> {
-  const id = parseJobId(interaction.customId);
-  if (!id || id.kind !== "reject" || !id.draftId) return;
+export async function handleJobRejectButton(interaction: ButtonInteraction) {
+  const id = parseCid(interaction.customId);
+  if (!id || id.kind !== "reject" || !id.key) return;
+  if (await denyUnlessOwner(interaction, id.ownerId)) return;
 
-  if (interaction.user.id !== id.ownerId) {
-    await interaction.reply({
-      content: "Only the user who ran this job can reject it.",
-      flags: MessageFlags.Ephemeral,
-    });
-    return;
-  }
-
-  const modal = new ModalBuilder()
-    .setCustomId(
-      `job:reject-modal:${id.ownerId}:${id.wikiChoice}:${id.draftId}`,
-    )
-    .setTitle("Reject draft")
-    .addLabelComponents(
-      new LabelBuilder()
-        .setLabel("Reason")
-        .setDescription("Used when you continue this job")
-        .setTextInputComponent(
-          new TextInputBuilder()
-            .setCustomId("reason")
-            .setStyle(TextInputStyle.Paragraph)
-            .setRequired(true)
-            .setMinLength(1)
-            .setMaxLength(1000),
-        ),
-    );
-
-  await interaction.showModal(modal);
+  await interaction.showModal(
+    new ModalBuilder()
+      .setCustomId(`job:reject-modal:${id.ownerId}:${id.wikiChoice}:${id.key}`)
+      .setTitle("Reject draft")
+      .addLabelComponents(
+        new LabelBuilder()
+          .setLabel("Reason")
+          .setDescription("Used when you continue this job")
+          .setTextInputComponent(
+            new TextInputBuilder()
+              .setCustomId("reason")
+              .setStyle(TextInputStyle.Paragraph)
+              .setRequired(true)
+              .setMinLength(1)
+              .setMaxLength(1000),
+          ),
+      ),
+  );
 }
 
 export async function handleJobRejectModal(
   interaction: ModalSubmitInteraction,
-): Promise<void> {
-  const id = parseJobId(interaction.customId);
-  if (!id || id.kind !== "reject-modal" || !id.draftId) return;
-
-  if (interaction.user.id !== id.ownerId) {
-    await interaction.reply({
-      content: "Only the user who ran this job can reject it.",
-      flags: MessageFlags.Ephemeral,
-    });
-    return;
-  }
+) {
+  const id = parseCid(interaction.customId);
+  if (!id || id.kind !== "reject-modal" || !id.key) return;
+  if (await denyUnlessOwner(interaction, id.ownerId)) return;
 
   const reason = interaction.fields.getTextInputValue("reason").trim();
-  if (!reason) {
-    await interaction.reply({
-      content: "Reason cannot be empty.",
-      flags: MessageFlags.Ephemeral,
-    });
-    return;
-  }
-
   await interaction.deferReply({ flags: MessageFlags.Ephemeral });
   const { wiki, outputPage } = pagesFor(id.ownerId, id.wikiChoice);
 
   try {
-    const proposal = await loadProposal(wiki, outputPage, id.draftId);
-    if (!proposal) {
+    const draft = (await getOutputIndex(wiki, outputPage)).drafts.find(
+      (d) => d.id === id.key,
+    );
+    if (!draft) {
       await interaction.editReply({ content: "Draft not found." });
       return;
     }
 
-    await setDraftStatus(wiki, outputPage, proposal.id, "rejected", reason);
-
-    if (interaction.message?.editable) {
-      await interaction.message.edit({ components: [] }).catch(() => {});
-    }
-
+    await setDraftStatus(wiki, outputPage, draft.id, "rejected", reason);
     await interaction.editReply({
-      content: `Rejected **${proposal.target}** (\`${proposal.id}\`): ${reason.slice(0, 500)}`,
+      content: `Rejected **${draft.target}** (\`${draft.id}\`): ${reason.slice(0, 500)}`,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
@@ -838,7 +733,7 @@ export async function handleJobRejectModal(
 export async function execute(
   interaction: ChatInputCommandInteraction,
   _member: GuildMember,
-): Promise<void> {
+) {
   if (!LLM_ENABLED) {
     await interaction.reply({
       content: "**LLM jobs are disabled.**",

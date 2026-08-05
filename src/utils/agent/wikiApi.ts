@@ -237,13 +237,26 @@ async function editWith(
   }
 }
 
-export async function clearPages(wiki: WikiConfig, titles: string[]) {
-  if (!titles.length) return;
+async function editPages(
+  wiki: WikiConfig,
+  edits: { title: string; text: string; summary: string }[],
+) {
+  if (!edits.length) return;
   const auth = await session(wiki);
-  for (const title of titles) {
-    const text = /\.json$/i.test(title) ? "{}" : "";
-    await editWith(wiki, auth, title, text, "Clear job page");
+  for (const e of edits) {
+    await editWith(wiki, auth, e.title, e.text, e.summary);
   }
+}
+
+export async function clearPages(wiki: WikiConfig, titles: string[]) {
+  await editPages(
+    wiki,
+    titles.map((title) => ({
+      title,
+      text: /\.json$/i.test(title) ? "{}" : "",
+      summary: "Clear job page",
+    })),
+  );
 }
 
 export async function publishPage(
@@ -252,8 +265,7 @@ export async function publishPage(
   text: string,
   summary: string,
 ) {
-  const auth = await session(wiki);
-  await editWith(wiki, auth, title, text, summary);
+  await editPages(wiki, [{ title, text, summary }]);
 }
 
 export interface OutputDraft {
@@ -277,19 +289,20 @@ export async function getOutputIndex(
   try {
     const data = JSON.parse(raw) as OutputIndex;
     return { drafts: data.drafts ?? [] };
-  } catch {
+  } catch (err) {
+    console.error("[wikiApi] invalid output JSON", title, err);
     return { drafts: [] };
   }
 }
 
 export async function setDraftStatus(
   wiki: WikiConfig,
-  title: string,
+  indexTitle: string,
   draftId: string,
   status: "applied" | "rejected",
   reason?: string,
 ): Promise<void> {
-  const index = await getOutputIndex(wiki, title);
+  const index = await getOutputIndex(wiki, indexTitle);
   const draft = index.drafts.find((d) => d.id === draftId);
   if (!draft || draft.status === status) return;
   draft.status = status;
@@ -297,10 +310,36 @@ export async function setDraftStatus(
   else delete draft.reason;
   await publishPage(
     wiki,
-    title,
+    indexTitle,
     JSON.stringify(index),
     `Mark ${status}: ${draftId}`,
   );
+}
+
+export async function publishAndApply(
+  wiki: WikiConfig,
+  opts: {
+    target: string;
+    body: string;
+    summary: string;
+    indexTitle: string;
+    draftId: string;
+  },
+): Promise<void> {
+  const index = await getOutputIndex(wiki, opts.indexTitle);
+  const draft = index.drafts.find((d) => d.id === opts.draftId);
+  if (draft) {
+    draft.status = "applied";
+    delete draft.reason;
+  }
+  await editPages(wiki, [
+    { title: opts.target, text: opts.body, summary: opts.summary },
+    {
+      title: opts.indexTitle,
+      text: JSON.stringify(index),
+      summary: `Mark applied: ${opts.draftId}`,
+    },
+  ]);
 }
 
 export interface CompareResult {

@@ -102,7 +102,7 @@ export async function runJob(input: JobInput): Promise<JobResult> {
           input.sessionPage,
           input.outputPage,
           input.jobId,
-          !!input.isContinue,
+          input.isContinue,
         ),
       },
     ];
