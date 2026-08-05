@@ -189,12 +189,7 @@ export async function getPageWikitext(
   return page.revisions?.[0]?.slots?.main?.content ?? null;
 }
 
-async function edit(
-  wiki: WikiConfig,
-  title: string,
-  text: string,
-  summary: string,
-): Promise<void> {
+async function session(wiki: WikiConfig) {
   const cookie = await login(wiki.apiBase);
   const tokenRes = await post(
     wiki.apiBase,
@@ -208,7 +203,16 @@ async function edit(
   );
   const csrftoken = (tokenRes.json.query as { tokens: { csrftoken: string } })
     .tokens.csrftoken;
+  return { cookie: tokenRes.cookie, csrftoken };
+}
 
+async function editWith(
+  wiki: WikiConfig,
+  auth: { cookie: string; csrftoken: string },
+  title: string,
+  text: string,
+  summary: string,
+): Promise<void> {
   const editRes = await post(
     wiki.apiBase,
     {
@@ -216,30 +220,40 @@ async function edit(
       title,
       text,
       summary,
-      token: csrftoken,
+      token: auth.csrftoken,
       format: "json",
       bot: "1",
     },
-    tokenRes.cookie,
+    auth.cookie,
   );
 
   const result = editRes.json.edit as { result?: string } | undefined;
   if (result?.result !== "Success") {
+    const code = (editRes.json.error as { code?: string } | undefined)?.code;
+    if (code === "missingtitle" || code === "emptypage") return;
     throw new Error(
       `Edit failed: ${JSON.stringify(editRes.json.error ?? editRes.json)}`,
     );
   }
 }
 
-export const clearPage = (wiki: WikiConfig, title: string) =>
-  edit(wiki, title, "", "Clear job page");
+export async function clearPages(wiki: WikiConfig, titles: string[]) {
+  if (!titles.length) return;
+  const auth = await session(wiki);
+  for (const title of titles) {
+    await editWith(wiki, auth, title, "", "Clear job page");
+  }
+}
 
-export const publishPage = (
+export async function publishPage(
   wiki: WikiConfig,
   title: string,
   text: string,
   summary: string,
-) => edit(wiki, title, text, summary);
+) {
+  const auth = await session(wiki);
+  await editWith(wiki, auth, title, text, summary);
+}
 
 export interface CompareResult {
   fromSize: number;

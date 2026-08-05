@@ -20,7 +20,7 @@ import {
 } from "discord.js";
 import { formatContextUsage, runJob } from "../utils/agent/jobLoop.js";
 import {
-  clearPage,
+  clearPages,
   compareToText,
   getPageInfo,
   getPageWikitext,
@@ -260,9 +260,7 @@ async function runClear(
 
   try {
     const drafts = await listSubpages(wiki, `${outputPage}/`);
-    await Promise.all(
-      [sessionPage, outputPage, ...drafts].map((t) => clearPage(wiki, t)),
-    );
+    await clearPages(wiki, [sessionPage, outputPage, ...drafts]);
     await interaction.editReply({
       content: `Cleared session + (${drafts.length} draft subpage(s)).`,
     });
