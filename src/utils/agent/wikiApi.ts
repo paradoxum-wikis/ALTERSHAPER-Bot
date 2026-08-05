@@ -246,15 +246,43 @@ async function editPages(
   }
 }
 
-export async function clearPages(wiki: WikiConfig, titles: string[]) {
-  await editPages(
-    wiki,
-    titles.map((title) => ({
+async function deleteWith(
+  wiki: WikiConfig,
+  auth: { cookie: string; csrftoken: string },
+  title: string,
+  reason: string,
+): Promise<boolean> {
+  const res = await post(
+    wiki.apiBase,
+    {
+      action: "delete",
       title,
-      text: /\.json$/i.test(title) ? "{}" : "",
-      summary: "Clear job page",
-    })),
+      reason,
+      token: auth.csrftoken,
+      format: "json",
+    },
+    auth.cookie,
   );
+  if (res.json.delete) return true;
+  const code = (res.json.error as { code?: string } | undefined)?.code;
+  if (code === "missingtitle") return true;
+  return false;
+}
+
+export async function clearPages(wiki: WikiConfig, titles: string[]) {
+  if (!titles.length) return;
+  const auth = await session(wiki);
+  for (const title of titles) {
+    const ok = await deleteWith(wiki, auth, title, "Clear job page");
+    if (ok) continue;
+    await editWith(
+      wiki,
+      auth,
+      title,
+      /\.json$/i.test(title) ? "{}" : "",
+      "Clear job page",
+    );
+  }
 }
 
 export async function publishPage(
