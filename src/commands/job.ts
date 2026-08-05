@@ -28,6 +28,7 @@ import {
   publishPage,
 } from "../utils/agent/wikiApi.js";
 import {
+  comparePagesUrl,
   outputTitle,
   pageUrl,
   resolveWiki,
@@ -460,17 +461,17 @@ export async function handleJobDiffButton(
 
   await interaction.deferReply({ flags: MessageFlags.Ephemeral });
   const { wiki, outputPage } = pagesFor(id.ownerId, id.wikiChoice);
+  const proposal = await loadProposal(wiki, outputPage, id.index);
+  if (!proposal) {
+    await interaction.editReply({ content: "Draft not found." });
+    return;
+  }
+
+  const mwDiff = comparePagesUrl(wiki, proposal.target, proposal.draftTitle);
 
   try {
-    const proposal = await loadProposal(wiki, outputPage, id.index);
-    if (!proposal) {
-      await interaction.editReply({ content: "Draft not found." });
-      return;
-    }
-
     const cmp = await compareToText(wiki, proposal.target, proposal.body);
     const delta = cmp.toSize - cmp.fromSize;
-    const deltaStr = `${delta >= 0 ? "+" : ""}${delta} bytes`;
     let body = cmp.text || "(no changes)";
     if (body.length > 3500) body = `${body.slice(0, 3500)}\n...truncated`;
 
@@ -478,18 +479,22 @@ export async function handleJobDiffButton(
       embeds: [
         new EmbedBuilder()
           .setColor(0xb9afce)
-          .setTitle(`Diff → ${proposal.target}`)
+          .setTitle(`Diff ➡️ ${proposal.target}`)
           .setDescription(`\`\`\`diff\n${body}\n\`\`\``.slice(0, 4096))
-          .addFields({
-            name: "Size",
-            value: `${cmp.fromSize} → ${cmp.toSize} (${deltaStr})`,
-          }),
+          .addFields(
+            {
+              name: "Size",
+              value: `${cmp.fromSize} -> ${cmp.toSize} (${delta >= 0 ? "+" : ""}${delta} bytes)`,
+            },
+            { name: "Wiki", value: `[Compare on wiki](${mwDiff})` },
+          ),
       ],
     });
   } catch (err) {
+    console.error("[job diff]", err);
     const message = err instanceof Error ? err.message : String(err);
     await interaction.editReply({
-      content: `**Diff failed:** ${message.slice(0, 1500)}`,
+      content: `**Diff failed:** ${message.slice(0, 1200)}\n[Compare on wiki](${mwDiff})`,
     });
   }
 }

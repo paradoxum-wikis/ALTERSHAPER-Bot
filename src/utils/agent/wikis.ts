@@ -84,6 +84,17 @@ export const outputTitle = (wiki: WikiConfig, userId: string) =>
 export const pageUrl = (wiki: WikiConfig, title: string) =>
   wiki.publicBase + title.replaceAll(" ", "_");
 
+export function comparePagesUrl(
+  wiki: WikiConfig,
+  page1: string,
+  page2: string,
+): string {
+  const u = new URL("Special:ComparePages", wiki.publicBase);
+  u.searchParams.set("page1", page1);
+  u.searchParams.set("page2", page2);
+  return u.toString();
+}
+
 export function isWritablePage(wiki: WikiConfig, title: string): boolean {
   const t = title.replaceAll("_", " ");
   for (const prefix of [wiki.sessionPrefix, wiki.outputPrefix]) {
