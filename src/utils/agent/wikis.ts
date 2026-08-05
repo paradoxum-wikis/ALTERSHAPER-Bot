@@ -89,10 +89,8 @@ export function comparePagesUrl(
   page1: string,
   page2: string,
 ): string {
-  const u = new URL("Special:ComparePages", wiki.publicBase);
-  u.searchParams.set("page1", page1);
-  u.searchParams.set("page2", page2);
-  return u.toString();
+  const q = new URLSearchParams({ page1, page2 });
+  return `${wiki.publicBase}Special:ComparePages?${q}`;
 }
 
 export function isWritablePage(wiki: WikiConfig, title: string): boolean {
