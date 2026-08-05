@@ -30,7 +30,7 @@ export class ConsoleHandler {
     console.log("Available console commands:");
     for (const [name, { description, isAlias }] of this.commands.entries()) {
       if (!isAlias) {
-        console.log(`  • ${name} — ${description}`);
+        console.log(`  • ${name} - ${description}`);
       }
     }
     console.log("");

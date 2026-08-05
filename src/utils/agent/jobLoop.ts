@@ -51,7 +51,7 @@ export function formatContextUsage(
   peakPromptTokens: number,
   contextLimit: number | null,
 ): string {
-  if (!peakPromptTokens) return "—";
+  if (!peakPromptTokens) return "-";
   if (contextLimit) {
     const pct = ((peakPromptTokens / contextLimit) * 100).toFixed(1);
     return `${fmtTokens(peakPromptTokens)} / ${fmtTokens(contextLimit)} peak prompt (${pct}%)`;
@@ -124,7 +124,10 @@ export async function runJob(input: JobInput): Promise<JobResult> {
         messages,
         tools,
         ...(thinking
-          ? { reasoning_effort: "high" as const, thinking: { type: "enabled" as const } }
+          ? {
+              reasoning_effort: "high" as const,
+              thinking: { type: "enabled" as const },
+            }
           : { thinking: { type: "disabled" as const } }),
       });
 

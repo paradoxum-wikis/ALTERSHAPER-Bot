@@ -417,13 +417,13 @@ async function runSession(interaction: ChatInputCommandInteraction) {
                       .map((p) => {
                         const reason =
                           p.status === "rejected" && p.reason
-                            ? ` — ${p.reason}`
+                            ? ` - ${p.reason}`
                             : "";
-                        return `• [${p.target}](${pageUrl(wiki, p.draftTitle)}) \`${p.id}\` · job \`${p.jobId}\` · ${p.status}${reason}`;
+                        return `• [${p.target}](${pageUrl(wiki, p.draftTitle)}) \`${p.id}\` - job \`${p.jobId}\` - ${p.status}${reason}`;
                       })
                       .join("\n")
                       .slice(0, 1024)
-                  : "—",
+                  : "-",
             },
           ),
       ],
@@ -573,7 +573,7 @@ export async function handleJobPickMenu(
         );
 
   await interaction.reply({
-    content: `**${p.target}** · [draft](${pageUrl(wiki, p.draftTitle)})`,
+    content: `**${p.target}** - [draft](${pageUrl(wiki, p.draftTitle)})`,
     components: [row],
     flags: MessageFlags.Ephemeral,
   });
