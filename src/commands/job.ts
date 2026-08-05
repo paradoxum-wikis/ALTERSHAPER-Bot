@@ -289,6 +289,12 @@ async function runAgentJob(opts: {
           .slice(0, 1024),
       });
     }
+    if (proposals.length > 25) {
+      embed.addFields({
+        name: "Picker",
+        value: `Select shows 25 of ${proposals.length} pending. Approve/reject some, or continue and split work.`,
+      });
+    }
 
     const components: ActionRowBuilder<
       ButtonBuilder | StringSelectMenuBuilder
@@ -301,7 +307,11 @@ async function runAgentJob(opts: {
         new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
           new StringSelectMenuBuilder()
             .setCustomId(`job:pick:${userId}:${wiki.choice}`)
-            .setPlaceholder("Select a proposal")
+            .setPlaceholder(
+              proposals.length > 25
+                ? `Select a proposal (25 of ${proposals.length})`
+                : "Select a proposal",
+            )
             .addOptions(
               proposals
                 .slice(0, 25)
