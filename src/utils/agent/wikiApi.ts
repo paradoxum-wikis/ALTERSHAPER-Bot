@@ -324,10 +324,10 @@ export async function publishAndApply(
     summary: string;
     indexTitle: string;
     draftId: string;
+    index: OutputIndex;
   },
 ): Promise<void> {
-  const index = await getOutputIndex(wiki, opts.indexTitle);
-  const draft = index.drafts.find((d) => d.id === opts.draftId);
+  const draft = opts.index.drafts.find((d) => d.id === opts.draftId);
   if (draft) {
     draft.status = "applied";
     delete draft.reason;
@@ -336,7 +336,7 @@ export async function publishAndApply(
     { title: opts.target, text: opts.body, summary: opts.summary },
     {
       title: opts.indexTitle,
-      text: JSON.stringify(index),
+      text: JSON.stringify(opts.index),
       summary: `Mark applied: ${opts.draftId}`,
     },
   ]);

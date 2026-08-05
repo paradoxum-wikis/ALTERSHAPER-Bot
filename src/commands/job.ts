@@ -116,7 +116,7 @@ function pagesOf(interaction: ChatInputCommandInteraction) {
   );
 }
 
-export function parseOutputTarget(wikitext: string): {
+function parseOutputTarget(wikitext: string): {
   target: string;
   body: string;
 } | null {
@@ -149,9 +149,8 @@ async function loadProposal(
   outputRoot: string,
   draftId: string,
 ) {
-  const item = (await getOutputIndex(wiki, outputRoot)).drafts.find(
-    (d) => d.id === draftId,
-  );
+  const index = await getOutputIndex(wiki, outputRoot);
+  const item = index.drafts.find((d) => d.id === draftId);
   if (!item) return null;
   const draftTitle = `${outputRoot}/${item.id}`;
   const wt = await getPageWikitext(wiki, draftTitle);
@@ -163,6 +162,7 @@ async function loadProposal(
     target: item.target,
     body: p.body,
     draftTitle,
+    index,
   };
 }
 
@@ -681,6 +681,7 @@ export async function handleJobApproveModal(
       summary: `Approved by ${interaction.user.tag} (${interaction.user.id}) via /job`,
       indexTitle: outputPage,
       draftId: proposal.id,
+      index: proposal.index,
     });
 
     await interaction.editReply({
