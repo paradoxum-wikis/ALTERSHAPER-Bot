@@ -12,6 +12,9 @@ import {
   ModalSubmitInteraction,
   SlashCommandBuilder,
   SlashCommandStringOption,
+  StringSelectMenuBuilder,
+  StringSelectMenuInteraction,
+  StringSelectMenuOptionBuilder,
   TextInputBuilder,
   TextInputStyle,
 } from "discord.js";
@@ -21,6 +24,7 @@ import {
   compareToText,
   getPageInfo,
   getPageWikitext,
+  listSubpages,
   publishPage,
 } from "../utils/agent/wikiApi.js";
 import {
@@ -34,6 +38,8 @@ import {
 export const LLM_ENABLED = process.env.LLM_ENABLED === "true";
 
 const AGREE = "I AGREE";
+
+type Proposal = { draftTitle: string; target: string };
 
 const addWikiOption = (o: SlashCommandStringOption) =>
   o
@@ -73,24 +79,11 @@ export const data = new SlashCommandBuilder()
       .addStringOption(addWikiOption),
   );
 
-function pagesOf(interaction: ChatInputCommandInteraction): {
-  wiki: WikiConfig;
-  sessionPage: string;
-  outputPage: string;
-  sessionUrl: string;
-  outputUrl: string;
-} {
-  const wiki = resolveWiki(interaction.options.getString("wiki"));
-  const uid = interaction.user.id;
-  const sessionPage = sessionTitle(wiki, uid);
-  const outputPage = outputTitle(wiki, uid);
-  return {
-    wiki,
-    sessionPage,
-    outputPage,
-    sessionUrl: pageUrl(wiki, sessionPage),
-    outputUrl: pageUrl(wiki, outputPage),
-  };
+function pagesOf(interaction: ChatInputCommandInteraction) {
+  return pagesFor(
+    interaction.user.id,
+    interaction.options.getString("wiki") ?? "tds",
+  );
 }
 
 function pagesFor(userId: string, wikiChoice: string) {
@@ -120,6 +113,65 @@ export function parseOutputTarget(wikitext: string): {
   return { target, body };
 }
 
+async function listProposals(
+  wiki: WikiConfig,
+  outputRoot: string,
+): Promise<Proposal[]> {
+  const subs = (await listSubpages(wiki, `${outputRoot}/`)).sort((a, b) =>
+    a.localeCompare(b),
+  );
+
+  if (subs.length) {
+    return subs.map((draftTitle) => {
+      const leaf = draftTitle.includes("/")
+        ? draftTitle.slice(draftTitle.lastIndexOf("/") + 1)
+        : draftTitle;
+      return {
+        draftTitle,
+        target: leaf.replaceAll("_", " "),
+      };
+    });
+  }
+
+  const wt = await getPageWikitext(wiki, outputRoot);
+  if (!wt?.trim()) return [];
+  const p = parseOutputTarget(wt);
+  if (!p) return [];
+  return [{ draftTitle: outputRoot, target: p.target }];
+}
+
+async function loadProposal(
+  wiki: WikiConfig,
+  outputRoot: string,
+  index: number,
+): Promise<{ target: string; body: string; draftTitle: string } | null> {
+  const list = await listProposals(wiki, outputRoot);
+  const item = list[index];
+  if (!item) return null;
+  const wt = await getPageWikitext(wiki, item.draftTitle);
+  if (!wt?.trim()) return null;
+  const p = parseOutputTarget(wt);
+  if (p) return { ...p, draftTitle: item.draftTitle };
+  return {
+    target: item.target,
+    body: wt,
+    draftTitle: item.draftTitle,
+  };
+}
+
+function actionButtons(ownerId: string, wikiChoice: string, index: number) {
+  return new ActionRowBuilder<ButtonBuilder>().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`job:diff:${ownerId}:${wikiChoice}:${index}`)
+      .setLabel("Diff")
+      .setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder()
+      .setCustomId(`job:approve:${ownerId}:${wikiChoice}:${index}`)
+      .setLabel("Approve")
+      .setStyle(ButtonStyle.Danger),
+  );
+}
+
 async function runSession(
   interaction: ChatInputCommandInteraction,
 ): Promise<void> {
@@ -141,6 +193,7 @@ async function runSession(
     const output = info.get(outputPage) ?? { exists: false, length: 0 };
     const size = (p: { exists: boolean; length: number }) =>
       p.exists ? `${p.length.toLocaleString()} bytes` : "does not exist yet";
+    const proposals = await listProposals(wiki, outputPage);
 
     await interaction.editReply({
       embeds: [
@@ -156,6 +209,19 @@ async function runSession(
             {
               name: "Output",
               value: `${output.exists ? `[${outputPage}](${outputUrl})` : `\`${outputPage}\``} · ${size(output)}`,
+            },
+            {
+              name: "Drafts",
+              value:
+                proposals.length > 0
+                  ? proposals
+                      .map(
+                        (p) =>
+                          `• [${p.target}](${pageUrl(wiki, p.draftTitle)})`,
+                      )
+                      .join("\n")
+                      .slice(0, 1024)
+                  : "—",
             },
           ),
       ],
@@ -248,11 +314,7 @@ async function runTask(
       onProgress,
     });
 
-    const outputText = await getPageWikitext(wiki, outputPage).catch(
-      () => null,
-    );
-    const canApprove =
-      Boolean(outputText?.trim()) && Boolean(parseOutputTarget(outputText!));
+    const proposals = await listProposals(wiki, outputPage).catch(() => []);
 
     const embed = new EmbedBuilder()
       .setColor(0xb9afce)
@@ -279,23 +341,46 @@ async function runTask(
         },
       );
 
-    const row = canApprove
-      ? new ActionRowBuilder<ButtonBuilder>().addComponents(
-          new ButtonBuilder()
-            .setCustomId(`job:diff:${interaction.user.id}:${wiki.choice}`)
-            .setLabel("Diff")
-            .setStyle(ButtonStyle.Secondary),
-          new ButtonBuilder()
-            .setCustomId(`job:approve:${interaction.user.id}:${wiki.choice}`)
-            .setLabel("Approve")
-            .setStyle(ButtonStyle.Danger),
-        )
-      : undefined;
+    if (proposals.length > 1) {
+      embed.addFields({
+        name: "Drafts",
+        value: proposals
+          .map((p) => `• ${p.target}`)
+          .join("\n")
+          .slice(0, 1024),
+      });
+    }
+
+    const uid = interaction.user.id;
+    const components: ActionRowBuilder<
+      ButtonBuilder | StringSelectMenuBuilder
+    >[] = [];
+
+    if (proposals.length === 1) {
+      components.push(actionButtons(uid, wiki.choice, 0));
+    } else if (proposals.length > 1) {
+      components.push(
+        new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
+          new StringSelectMenuBuilder()
+            .setCustomId(`job:pick:${uid}:${wiki.choice}`)
+            .setPlaceholder("Select a proposal")
+            .addOptions(
+              proposals
+                .slice(0, 25)
+                .map((p, i) =>
+                  new StringSelectMenuOptionBuilder()
+                    .setLabel(p.target.slice(0, 100))
+                    .setValue(String(i)),
+                ),
+            ),
+        ),
+      );
+    }
 
     await interaction.editReply({
       content: "",
       embeds: [embed],
-      components: row ? [row] : [],
+      components,
     });
   } catch (err) {
     console.error(`[job ${jobId}]`, err);
@@ -308,53 +393,92 @@ async function runTask(
   }
 }
 
-function parseJobButtonId(customId: string): {
+function parseJobId(customId: string): {
   kind: string;
   ownerId: string;
   wikiChoice: string;
+  index: number;
 } | null {
   const parts = customId.split(":");
-  if (parts.length !== 4 || parts[0] !== "job") return null;
-  return { kind: parts[1], ownerId: parts[2], wikiChoice: parts[3] };
+  if (parts[0] !== "job" || parts.length < 4) return null;
+  return {
+    kind: parts[1],
+    ownerId: parts[2],
+    wikiChoice: parts[3],
+    index: parts[4] !== undefined ? Number(parts[4]) : 0,
+  };
+}
+
+export async function handleJobPickMenu(
+  interaction: StringSelectMenuInteraction,
+): Promise<void> {
+  const id = parseJobId(interaction.customId);
+  if (!id || id.kind !== "pick") return;
+
+  const index = Number(interaction.values[0]);
+  if (!Number.isFinite(index)) return;
+
+  const { wiki, outputPage } = pagesFor(id.ownerId, id.wikiChoice);
+  const proposals = await listProposals(wiki, outputPage).catch(() => []);
+  const p = proposals[index];
+  if (!p) {
+    await interaction.reply({
+      content: "That draft is no longer available.",
+      flags: MessageFlags.Ephemeral,
+    });
+    return;
+  }
+
+  const canApprove = interaction.user.id === id.ownerId;
+  const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`job:diff:${id.ownerId}:${id.wikiChoice}:${index}`)
+      .setLabel("Diff")
+      .setStyle(ButtonStyle.Secondary),
+  );
+  if (canApprove) {
+    row.addComponents(
+      new ButtonBuilder()
+        .setCustomId(`job:approve:${id.ownerId}:${id.wikiChoice}:${index}`)
+        .setLabel("Approve")
+        .setStyle(ButtonStyle.Danger),
+    );
+  }
+
+  await interaction.reply({
+    content: `**${p.target}** · [draft](${pageUrl(wiki, p.draftTitle)})`,
+    components: [row],
+    flags: MessageFlags.Ephemeral,
+  });
 }
 
 export async function handleJobDiffButton(
   interaction: ButtonInteraction,
 ): Promise<void> {
-  const id = parseJobButtonId(interaction.customId);
+  const id = parseJobId(interaction.customId);
   if (!id || id.kind !== "diff") return;
 
   await interaction.deferReply({ flags: MessageFlags.Ephemeral });
   const { wiki, outputPage } = pagesFor(id.ownerId, id.wikiChoice);
 
   try {
-    const wikitext = await getPageWikitext(wiki, outputPage);
-    if (!wikitext?.trim()) {
-      await interaction.editReply({ content: "Output page is empty." });
-      return;
-    }
-    const parsed = parseOutputTarget(wikitext);
-    if (!parsed) {
-      await interaction.editReply({
-        content:
-          "Output needs `<!-- aphonos-target: PageTitle -->` plus the page body.",
-      });
+    const proposal = await loadProposal(wiki, outputPage, id.index);
+    if (!proposal) {
+      await interaction.editReply({ content: "Draft not found." });
       return;
     }
 
-    const cmp = await compareToText(wiki, parsed.target, parsed.body);
+    const cmp = await compareToText(wiki, proposal.target, proposal.body);
     const delta = cmp.toSize - cmp.fromSize;
     const deltaStr = `${delta >= 0 ? "+" : ""}${delta} bytes`;
     let body = cmp.text || "(no changes)";
-    if (body.length > 3500) {
-      body = `${body.slice(0, 3500)}\n…truncated`;
-    }
+    if (body.length > 3500) body = `${body.slice(0, 3500)}\n...truncated`;
 
     await interaction.editReply({
       embeds: [
         new EmbedBuilder()
           .setColor(0xb9afce)
-          .setTitle(`Diff → ${parsed.target}`)
+          .setTitle(`Diff → ${proposal.target}`)
           .setDescription(`\`\`\`diff\n${body}\n\`\`\``.slice(0, 4096))
           .addFields({
             name: "Size",
@@ -373,11 +497,10 @@ export async function handleJobDiffButton(
 export async function handleJobApproveButton(
   interaction: ButtonInteraction,
 ): Promise<void> {
-  const id = parseJobButtonId(interaction.customId);
+  const id = parseJobId(interaction.customId);
   if (!id || id.kind !== "approve") return;
-  const { ownerId, wikiChoice } = id;
 
-  if (interaction.user.id !== ownerId) {
+  if (interaction.user.id !== id.ownerId) {
     await interaction.reply({
       content: "Only the user who ran this job can approve it.",
       flags: MessageFlags.Ephemeral,
@@ -386,11 +509,11 @@ export async function handleJobApproveButton(
   }
 
   const modal = new ModalBuilder()
-    .setCustomId(`job:approve-modal:${ownerId}:${wikiChoice}`)
+    .setCustomId(`job:approve-modal:${id.ownerId}:${id.wikiChoice}:${id.index}`)
     .setTitle("Confirm publish")
     .addLabelComponents(
       new LabelBuilder()
-        .setLabel(`Please type: ${AGREE}`)
+        .setLabel(`Please type: '${AGREE}'`)
         .setDescription("You accept full liability for this publish")
         .setTextInputComponent(
           new TextInputBuilder()
@@ -409,18 +532,10 @@ export async function handleJobApproveButton(
 export async function handleJobApproveModal(
   interaction: ModalSubmitInteraction,
 ): Promise<void> {
-  const parts = interaction.customId.split(":");
-  // job:approve-modal:userId:wikiChoice
-  if (
-    parts.length !== 4 ||
-    parts[0] !== "job" ||
-    parts[1] !== "approve-modal"
-  ) {
-    return;
-  }
-  const [, , ownerId, wikiChoice] = parts;
+  const id = parseJobId(interaction.customId);
+  if (!id || id.kind !== "approve-modal") return;
 
-  if (interaction.user.id !== ownerId) {
+  if (interaction.user.id !== id.ownerId) {
     await interaction.reply({
       content: "Only the user who ran this job can approve it.",
       flags: MessageFlags.Ephemeral,
@@ -431,38 +546,26 @@ export async function handleJobApproveModal(
   const typed = interaction.fields.getTextInputValue("liability").trim();
   if (typed.toUpperCase() !== AGREE) {
     await interaction.reply({
-      content: `You must type **${AGREE}** exactly to accept liability and publish.`,
+      content: `You must type "${AGREE}" exactly to accept liability and publish.`,
       flags: MessageFlags.Ephemeral,
     });
     return;
   }
 
   await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-
-  const { wiki, outputPage } = pagesFor(ownerId, wikiChoice);
+  const { wiki, outputPage } = pagesFor(id.ownerId, id.wikiChoice);
 
   try {
-    const wikitext = await getPageWikitext(wiki, outputPage);
-    if (!wikitext?.trim()) {
-      await interaction.editReply({
-        content: "Output page is empty, there is nothing to publish.",
-      });
-      return;
-    }
-
-    const parsed = parseOutputTarget(wikitext);
-    if (!parsed) {
-      await interaction.editReply({
-        content:
-          "Output needs `<!-- aphonos-target: PageTitle -->` in the wikitext source, plus the page body.",
-      });
+    const proposal = await loadProposal(wiki, outputPage, id.index);
+    if (!proposal) {
+      await interaction.editReply({ content: "Draft not found." });
       return;
     }
 
     await publishPage(
       wiki,
-      parsed.target,
-      parsed.body,
+      proposal.target,
+      proposal.body,
       `Approved by ${interaction.user.tag} (${interaction.user.id}) via /job`,
     );
 
@@ -470,9 +573,9 @@ export async function handleJobApproveModal(
       await interaction.message.edit({ components: [] }).catch(() => {});
     }
 
-    const liveUrl = pageUrl(wiki, parsed.target);
+    const liveUrl = pageUrl(wiki, proposal.target);
     await interaction.editReply({
-      content: `Published [${parsed.target}](${liveUrl}).`,
+      content: `Published [${proposal.target}](${liveUrl}).`,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

@@ -122,6 +122,43 @@ export async function getPageInfo(
   return out;
 }
 
+export async function listSubpages(
+  wiki: WikiConfig,
+  titlePrefix: string,
+): Promise<string[]> {
+  const colon = titlePrefix.indexOf(":");
+  if (colon === -1) return [];
+  const nsName = titlePrefix.slice(0, colon);
+  const rest = titlePrefix.slice(colon + 1);
+  const ns = nsName.toLowerCase() === "user" ? 2 : 0;
+
+  const titles: string[] = [];
+  let apcontinue: string | undefined;
+  do {
+    const params = new URLSearchParams({
+      action: "query",
+      list: "allpages",
+      apnamespace: String(ns),
+      apprefix: rest,
+      aplimit: "50",
+      format: "json",
+      formatversion: "2",
+    });
+    if (apcontinue) params.set("apcontinue", apcontinue);
+
+    const res = await fetch(`${wiki.apiBase}?${params}`);
+    if (!res.ok) throw new Error(`Wiki API ${res.status}`);
+    const data = (await res.json()) as {
+      continue?: { apcontinue?: string };
+      query?: { allpages?: { title: string }[] };
+    };
+    for (const p of data.query?.allpages ?? []) titles.push(p.title);
+    apcontinue = data.continue?.apcontinue;
+  } while (apcontinue);
+
+  return titles;
+}
+
 export async function getPageWikitext(
   wiki: WikiConfig,
   title: string,

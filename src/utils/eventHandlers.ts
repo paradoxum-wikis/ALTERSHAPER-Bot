@@ -22,6 +22,12 @@ export async function handleInteraction(
   interaction: Interaction,
   commands: Collection<string, Command>,
 ): Promise<void> {
+  if (interaction.isStringSelectMenu() && interaction.customId.startsWith("job:pick:")) {
+    const { handleJobPickMenu } = await import("../commands/job.js");
+    await handleJobPickMenu(interaction);
+    return;
+  }
+
   if (interaction.isButton()) {
     if (interaction.customId.startsWith("job:diff:")) {
       const { handleJobDiffButton } = await import("../commands/job.js");

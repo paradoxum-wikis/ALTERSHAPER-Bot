@@ -75,7 +75,7 @@ export async function runJob(input: JobInput): Promise<JobResult> {
   });
 
   try {
-    await input.onProgress?.("Connecting to wiki tools…");
+    await input.onProgress?.("Connecting to wiki tools...");
     await mcp.connect();
     const tools = toTools(await mcp.listTools());
     if (!tools.length) throw new Error("No MCP tools available after filter");
@@ -106,7 +106,7 @@ export async function runJob(input: JobInput): Promise<JobResult> {
         );
       }
 
-      await input.onProgress?.(`Thinking (step ${step}/${MAX_STEPS})…`);
+      await input.onProgress?.(`Thinking (step ${step}/${MAX_STEPS})...`);
 
       const res = await client.chat.completions.create({
         model,
@@ -142,14 +142,14 @@ export async function runJob(input: JobInput): Promise<JobResult> {
       for (const call of msg.tool_calls) {
         if (call.type !== "function") continue;
         const { name, arguments: rawArgs } = call.function;
-        await input.onProgress?.(`\`${name}\`…`);
+        await input.onProgress?.(`\`${name}\`...`);
 
         const prepared = prepareToolArgs(name, rawArgs, input.wiki);
         let content = prepared.ok
           ? await mcp.callTool(name, prepared.args)
           : prepared.error;
         if (content.length > TOOL_RESULT_MAX) {
-          content = `${content.slice(0, TOOL_RESULT_MAX)}\n…[truncated ${content.length - TOOL_RESULT_MAX} chars]`;
+          content = `${content.slice(0, TOOL_RESULT_MAX)}\n...[truncated ${content.length - TOOL_RESULT_MAX} chars]`;
         }
 
         console.log(`[job ${input.jobId}] ${input.wiki.choice} tool=${name}`);
