@@ -82,7 +82,7 @@ export const data = new SlashCommandBuilder()
   .addSubcommand((sc) =>
     sc
       .setName("clear")
-      .setDescription("Clear your session page")
+      .setDescription("Clear session and drafts")
       .addStringOption(addWikiOption),
   );
 
@@ -129,15 +129,18 @@ async function listProposals(
   );
 
   if (subs.length) {
-    return subs.map((draftTitle) => {
-      const leaf = draftTitle.includes("/")
-        ? draftTitle.slice(draftTitle.lastIndexOf("/") + 1)
-        : draftTitle;
-      return {
-        draftTitle,
-        target: leaf.replaceAll("_", " "),
-      };
-    });
+    const info = await getPageInfo(wiki, subs);
+    return subs
+      .filter((t) => (info.get(t)?.length ?? 0) > 0)
+      .map((draftTitle) => {
+        const leaf = draftTitle.includes("/")
+          ? draftTitle.slice(draftTitle.lastIndexOf("/") + 1)
+          : draftTitle;
+        return {
+          draftTitle,
+          target: leaf.replaceAll("_", " "),
+        };
+      });
   }
 
   const wt = await getPageWikitext(wiki, outputRoot);
@@ -252,29 +255,22 @@ async function runClear(
     return;
   }
 
-  const { wiki, sessionPage, sessionUrl } = pagesOf(interaction);
+  const { wiki, sessionPage, outputPage } = pagesOf(interaction);
   await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
   try {
-    const before = (await getPageInfo(wiki, sessionPage)).get(sessionPage) ?? {
-      exists: false,
-      length: 0,
-    };
-    if (!before.exists || before.length === 0) {
-      await interaction.editReply({
-        content: `Session is already empty: \`${sessionPage}\``,
-      });
-      return;
-    }
-
-    await clearPage(wiki, sessionPage);
+    const drafts = await listSubpages(wiki, `${outputPage}/`);
+    await Promise.all(
+      [sessionPage, outputPage, ...drafts].map((t) => clearPage(wiki, t)),
+    );
     await interaction.editReply({
-      content: `Cleared [${sessionPage}](${sessionUrl}) (${before.length.toLocaleString()} bytes -> empty).`,
+      content: `Cleared session + (${drafts.length} draft subpage(s)).`,
     });
   } catch (err) {
+    console.error("[job clear]", err);
     const message = err instanceof Error ? err.message : String(err);
     await interaction.editReply({
-      content: `**Failed to clear session:** ${message.slice(0, 1500)}`,
+      content: `**Failed to clear:** ${message.slice(0, 1500)}`,
     });
   }
 }
