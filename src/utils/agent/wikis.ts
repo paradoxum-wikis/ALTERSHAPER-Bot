@@ -79,7 +79,7 @@ export const sessionTitle = (wiki: WikiConfig, userId: string) =>
   `${wiki.sessionPrefix}/${userId}`;
 
 export const outputTitle = (wiki: WikiConfig, userId: string) =>
-  `${wiki.outputPrefix}/${userId}`;
+  `${wiki.outputPrefix}/${userId}.json`;
 
 export const pageUrl = (wiki: WikiConfig, title: string) =>
   wiki.publicBase + title.replaceAll(" ", "_");

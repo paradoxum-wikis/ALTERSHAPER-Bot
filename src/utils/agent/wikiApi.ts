@@ -241,7 +241,8 @@ export async function clearPages(wiki: WikiConfig, titles: string[]) {
   if (!titles.length) return;
   const auth = await session(wiki);
   for (const title of titles) {
-    await editWith(wiki, auth, title, "", "Clear job page");
+    const text = /\.json$/i.test(title) ? "{}" : "";
+    await editWith(wiki, auth, title, text, "Clear job page");
   }
 }
 
@@ -253,6 +254,41 @@ export async function publishPage(
 ) {
   const auth = await session(wiki);
   await editWith(wiki, auth, title, text, summary);
+}
+
+export interface OutputDraft {
+  target: string;
+  status: "pending" | "applied";
+}
+
+export interface OutputIndex {
+  drafts: OutputDraft[];
+}
+
+export async function getOutputIndex(
+  wiki: WikiConfig,
+  title: string,
+): Promise<OutputIndex> {
+  const raw = await getPageWikitext(wiki, title);
+  if (!raw?.trim()) return { drafts: [] };
+  try {
+    const data = JSON.parse(raw) as OutputIndex;
+    return { drafts: data.drafts ?? [] };
+  } catch {
+    return { drafts: [] };
+  }
+}
+
+export async function markDraftApplied(
+  wiki: WikiConfig,
+  title: string,
+  target: string,
+): Promise<void> {
+  const index = await getOutputIndex(wiki, title);
+  const draft = index.drafts.find((d) => d.target === target);
+  if (!draft || draft.status === "applied") return;
+  draft.status = "applied";
+  await publishPage(wiki, title, JSON.stringify(index), `Mark applied: ${target}`);
 }
 
 export interface CompareResult {

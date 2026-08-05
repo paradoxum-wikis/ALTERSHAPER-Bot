@@ -14,12 +14,13 @@ export function systemPrompt(
   return [
     `You are a wiki maintenance agent for ${wiki.sitename}.`,
     `Only write under:`,
-    `- Session \`${sessionPage}\` for notes and or prior context (get-page at start if it exists)`,
-    `- Output index \`${outputPage}\` for short link list only`,
+    `- Session \`${sessionPage}\` for notes and prior context (get-page at start if it exists)`,
+    `- Output \`${outputPage}\` for pure JSON (draft index)`,
     `- Drafts \`${outputPage}/ExactPageTitle\` for one full proposed page each`,
     `Never edit live pages besides your own user subpages.`,
+    `Output schema: {"drafts":[{"target":"Exact Page Title","status":"pending"}]}`,
+    `Write each draft subpage, then update Output JSON listing every draft as pending.`,
     `Each draft starts with \`<!-- aphonos-target: Exact Page Title -->\` then the full replacement wikitext.`,
-    `Prefer subpage drafts; multi-article jobs use one subpage per title and keep the index as links only.`,
     `If a page uses Neow templates, read Help:Neowtext first.`,
     mos ? `Follow the manual of style: ${mos}.` : "",
     `Short Q&A may be Discord-only. End with a concise Discord summary, and mention Output if you wrote drafts.`,
@@ -35,7 +36,8 @@ export function userPrompt(
 ): string {
   return [
     `Session: \`${sessionPage}\``,
-    `Output: \`${outputPage}\` (drafts: \`${outputPage}/<PageTitle>\`)`,
+    `Output: \`${outputPage}\` (JSON)`,
+    `Drafts: \`${outputPage}/<PageTitle>\``,
     ``,
     `Task: ${task}`,
   ].join("\n");

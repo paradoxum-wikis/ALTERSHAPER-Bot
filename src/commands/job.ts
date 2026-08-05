@@ -22,9 +22,11 @@ import { formatContextUsage, runJob } from "../utils/agent/jobLoop.js";
 import {
   clearPages,
   compareToText,
+  getOutputIndex,
   getPageInfo,
   getPageWikitext,
   listSubpages,
+  markDraftApplied,
   publishPage,
 } from "../utils/agent/wikiApi.js";
 import {
@@ -40,7 +42,11 @@ export const LLM_ENABLED = process.env.LLM_ENABLED === "true";
 
 const AGREE = "I AGREE";
 
-type Proposal = { draftTitle: string; target: string };
+type Proposal = {
+  draftTitle: string;
+  target: string;
+  status: "pending" | "applied";
+};
 
 const addWikiOption = (o: SlashCommandStringOption) =>
   o
@@ -123,31 +129,16 @@ export function parseOutputTarget(wikitext: string): {
 async function listProposals(
   wiki: WikiConfig,
   outputRoot: string,
+  all = false,
 ): Promise<Proposal[]> {
-  const subs = (await listSubpages(wiki, `${outputRoot}/`)).sort((a, b) =>
-    a.localeCompare(b),
-  );
-
-  if (subs.length) {
-    const info = await getPageInfo(wiki, subs);
-    return subs
-      .filter((t) => (info.get(t)?.length ?? 0) > 0)
-      .map((draftTitle) => {
-        const leaf = draftTitle.includes("/")
-          ? draftTitle.slice(draftTitle.lastIndexOf("/") + 1)
-          : draftTitle;
-        return {
-          draftTitle,
-          target: leaf.replaceAll("_", " "),
-        };
-      });
-  }
-
-  const wt = await getPageWikitext(wiki, outputRoot);
-  if (!wt?.trim()) return [];
-  const p = parseOutputTarget(wt);
-  if (!p) return [];
-  return [{ draftTitle: outputRoot, target: p.target }];
+  const { drafts } = await getOutputIndex(wiki, outputRoot);
+  return drafts
+    .filter((d) => all || d.status === "pending")
+    .map((d) => ({
+      draftTitle: `${outputRoot}/${d.target}`,
+      target: d.target,
+      status: d.status,
+    }));
 }
 
 async function loadProposal(
@@ -155,18 +146,13 @@ async function loadProposal(
   outputRoot: string,
   index: number,
 ): Promise<{ target: string; body: string; draftTitle: string } | null> {
-  const list = await listProposals(wiki, outputRoot);
-  const item = list[index];
+  const item = (await listProposals(wiki, outputRoot))[index];
   if (!item) return null;
   const wt = await getPageWikitext(wiki, item.draftTitle);
   if (!wt?.trim()) return null;
   const p = parseOutputTarget(wt);
-  if (p) return { ...p, draftTitle: item.draftTitle };
-  return {
-    target: item.target,
-    body: wt,
-    draftTitle: item.draftTitle,
-  };
+  if (!p) return null;
+  return { target: item.target, body: p.body, draftTitle: item.draftTitle };
 }
 
 function actionButtons(ownerId: string, wikiChoice: string, index: number) {
@@ -203,7 +189,7 @@ async function runSession(
     const output = info.get(outputPage) ?? { exists: false, length: 0 };
     const size = (p: { exists: boolean; length: number }) =>
       p.exists ? `${p.length.toLocaleString()} bytes` : "does not exist yet";
-    const proposals = await listProposals(wiki, outputPage);
+    const proposals = await listProposals(wiki, outputPage, true);
 
     await interaction.editReply({
       embeds: [
@@ -214,11 +200,11 @@ async function runSession(
             { name: "Wiki", value: wiki.sitename },
             {
               name: "Session",
-              value: `${session.exists ? `[${sessionPage}](${sessionUrl})` : `\`${sessionPage}\``} · ${size(session)}`,
+              value: `${session.exists ? `[${sessionPage}](${sessionUrl})` : `\`${sessionPage}\``} - ${size(session)}`,
             },
             {
               name: "Output",
-              value: `${output.exists ? `[${outputPage}](${outputUrl})` : `\`${outputPage}\``} · ${size(output)}`,
+              value: `${output.exists ? `[${outputPage}](${outputUrl})` : `\`${outputPage}\``} - ${size(output)}`,
             },
             {
               name: "Drafts",
@@ -227,7 +213,7 @@ async function runSession(
                   ? proposals
                       .map(
                         (p) =>
-                          `• [${p.target}](${pageUrl(wiki, p.draftTitle)})`,
+                          `• [${p.target}](${pageUrl(wiki, p.draftTitle)}) - ${p.status}`,
                       )
                       .join("\n")
                       .slice(0, 1024)
@@ -262,7 +248,7 @@ async function runClear(
     const drafts = await listSubpages(wiki, `${outputPage}/`);
     await clearPages(wiki, [sessionPage, outputPage, ...drafts]);
     await interaction.editReply({
-      content: `Cleared session + (${drafts.length} draft subpage(s)).`,
+      content: `Cleared session + output + (${drafts.length} draft subpage(s)).`,
     });
   } catch (err) {
     console.error("[job clear]", err);
@@ -449,7 +435,7 @@ export async function handleJobPickMenu(
   }
 
   await interaction.reply({
-    content: `**${p.target}** · [draft](${pageUrl(wiki, p.draftTitle)})`,
+    content: `**${p.target}** - [draft](${pageUrl(wiki, p.draftTitle)})`,
     components: [row],
     flags: MessageFlags.Ephemeral,
   });
@@ -575,6 +561,7 @@ export async function handleJobApproveModal(
       proposal.body,
       `Approved by ${interaction.user.tag} (${interaction.user.id}) via /job`,
     );
+    await markDraftApplied(wiki, outputPage, proposal.target);
 
     if (interaction.message?.editable) {
       await interaction.message.edit({ components: [] }).catch(() => {});
