@@ -257,6 +257,8 @@ export async function publishPage(
 }
 
 export interface OutputDraft {
+  id: string;
+  jobId: string;
   target: string;
   status: "pending" | "applied";
 }
@@ -282,13 +284,18 @@ export async function getOutputIndex(
 export async function markDraftApplied(
   wiki: WikiConfig,
   title: string,
-  target: string,
+  draftId: string,
 ): Promise<void> {
   const index = await getOutputIndex(wiki, title);
-  const draft = index.drafts.find((d) => d.target === target);
+  const draft = index.drafts.find((d) => d.id === draftId);
   if (!draft || draft.status === "applied") return;
   draft.status = "applied";
-  await publishPage(wiki, title, JSON.stringify(index), `Mark applied: ${target}`);
+  await publishPage(
+    wiki,
+    title,
+    JSON.stringify(index),
+    `Mark applied: ${draftId}`,
+  );
 }
 
 export interface CompareResult {

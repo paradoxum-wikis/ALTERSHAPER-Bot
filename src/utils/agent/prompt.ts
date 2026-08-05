@@ -16,10 +16,11 @@ export function systemPrompt(
     `Only write under:`,
     `- Session \`${sessionPage}\` for notes and prior context (get-page at start if it exists)`,
     `- Output \`${outputPage}\` for pure JSON (draft index)`,
-    `- Drafts \`${outputPage}/ExactPageTitle\` for one full proposed page each`,
+    `- Drafts \`${outputPage}/<id>\` for one full proposed page each`,
     `Never edit live pages besides your own user subpages.`,
-    `Output schema: {"drafts":[{"target":"Exact Page Title","status":"pending"}]}`,
-    `Write each draft subpage, then update Output JSON listing every draft as pending.`,
+    `Output schema: {"drafts":[{"id":"shortId","jobId":"thisJobId","target":"Exact Page Title","status":"pending"}]}`,
+    `Each draft: short unique id (4–8 alphanum), jobId exactly as given in the user message, target = live title. Draft page is \`${outputPage}/<id>\`. Same target may use multiple ids.`,
+    `get-page Output first; keep existing drafts and append yours. Write each draft page, then write Output JSON.`,
     `Each draft starts with \`<!-- aphonos-target: Exact Page Title -->\` then the full replacement wikitext.`,
     `If a page uses Neow templates, read Help:Neowtext first.`,
     mos ? `Follow the manual of style: ${mos}.` : "",
@@ -33,12 +34,20 @@ export function userPrompt(
   task: string,
   sessionPage: string,
   outputPage: string,
+  jobId: string,
+  isContinue = false,
 ): string {
   return [
     `Session: \`${sessionPage}\``,
     `Output: \`${outputPage}\` (JSON)`,
-    `Drafts: \`${outputPage}/<PageTitle>\``,
+    `Drafts: \`${outputPage}/<id>\``,
+    `Job id: \`${jobId}\``,
+    isContinue
+      ? `Continue this job: work from its drafts in Output; keep jobId \`${jobId}\` on drafts you write or update.`
+      : "",
     ``,
     `Task: ${task}`,
-  ].join("\n");
+  ]
+    .filter(Boolean)
+    .join("\n");
 }

@@ -23,6 +23,7 @@ export interface JobInput {
   sessionPage: string;
   outputPage: string;
   jobId: string;
+  isContinue?: boolean;
   thinking?: boolean;
   onProgress?: (msg: string) => void | Promise<void>;
 }
@@ -96,7 +97,13 @@ export async function runJob(input: JobInput): Promise<JobResult> {
       },
       {
         role: "user",
-        content: userPrompt(input.task, input.sessionPage, input.outputPage),
+        content: userPrompt(
+          input.task,
+          input.sessionPage,
+          input.outputPage,
+          input.jobId,
+          !!input.isContinue,
+        ),
       },
     ];
 

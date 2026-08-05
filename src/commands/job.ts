@@ -43,6 +43,8 @@ export const LLM_ENABLED = process.env.LLM_ENABLED === "true";
 const AGREE = "I AGREE";
 
 type Proposal = {
+  id: string;
+  jobId: string;
   draftTitle: string;
   target: string;
   status: "pending" | "applied";
@@ -70,6 +72,12 @@ export const data = new SlashCommandBuilder()
           .setName("task")
           .setDescription("What the agent should do")
           .setRequired(true),
+      )
+      .addStringOption((o) =>
+        o
+          .setName("job")
+          .setDescription("Existing job id to continue (omit for a new job)")
+          .setRequired(false),
       )
       .addStringOption(addWikiOption)
       .addBooleanOption((o) =>
@@ -129,13 +137,20 @@ export function parseOutputTarget(wikitext: string): {
 async function listProposals(
   wiki: WikiConfig,
   outputRoot: string,
-  all = false,
+  opts: { all?: boolean; jobId?: string } = {},
 ): Promise<Proposal[]> {
   const { drafts } = await getOutputIndex(wiki, outputRoot);
   return drafts
-    .filter((d) => all || d.status === "pending")
+    .filter(
+      (d) =>
+        d.id &&
+        (opts.all || d.status === "pending") &&
+        (!opts.jobId || d.jobId === opts.jobId),
+    )
     .map((d) => ({
-      draftTitle: `${outputRoot}/${d.target}`,
+      id: d.id,
+      jobId: d.jobId,
+      draftTitle: `${outputRoot}/${d.id}`,
       target: d.target,
       status: d.status,
     }));
@@ -144,28 +159,177 @@ async function listProposals(
 async function loadProposal(
   wiki: WikiConfig,
   outputRoot: string,
-  index: number,
-): Promise<{ target: string; body: string; draftTitle: string } | null> {
-  const item = (await listProposals(wiki, outputRoot))[index];
+  draftId: string,
+): Promise<{ id: string; target: string; body: string; draftTitle: string } | null> {
+  const item = (await getOutputIndex(wiki, outputRoot)).drafts.find(
+    (d) => d.id === draftId,
+  );
   if (!item) return null;
-  const wt = await getPageWikitext(wiki, item.draftTitle);
+  const draftTitle = `${outputRoot}/${item.id}`;
+  const wt = await getPageWikitext(wiki, draftTitle);
   if (!wt?.trim()) return null;
   const p = parseOutputTarget(wt);
   if (!p) return null;
-  return { target: item.target, body: p.body, draftTitle: item.draftTitle };
+  return {
+    id: item.id,
+    target: item.target,
+    body: p.body,
+    draftTitle,
+  };
 }
 
-function actionButtons(ownerId: string, wikiChoice: string, index: number) {
+function actionButtons(ownerId: string, wikiChoice: string, draftId: string) {
   return new ActionRowBuilder<ButtonBuilder>().addComponents(
     new ButtonBuilder()
-      .setCustomId(`job:diff:${ownerId}:${wikiChoice}:${index}`)
+      .setCustomId(`job:diff:${ownerId}:${wikiChoice}:${draftId}`)
       .setLabel("Diff")
       .setStyle(ButtonStyle.Secondary),
     new ButtonBuilder()
-      .setCustomId(`job:approve:${ownerId}:${wikiChoice}:${index}`)
+      .setCustomId(`job:approve:${ownerId}:${wikiChoice}:${draftId}`)
       .setLabel("Approve")
       .setStyle(ButtonStyle.Danger),
   );
+}
+
+function continueButton(ownerId: string, wikiChoice: string, jobId: string) {
+  return new ActionRowBuilder<ButtonBuilder>().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`job:continue:${ownerId}:${wikiChoice}:${jobId}`)
+      .setLabel("Continue")
+      .setStyle(ButtonStyle.Primary),
+  );
+}
+
+function newJobId() {
+  return `${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
+}
+
+type JobReply =
+  | ChatInputCommandInteraction
+  | ModalSubmitInteraction;
+
+async function runAgentJob(opts: {
+  interaction: JobReply;
+  userId: string;
+  wikiChoice: string;
+  task: string;
+  jobId: string;
+  isContinue: boolean;
+  thinking: boolean;
+}): Promise<void> {
+  const { interaction, userId, wikiChoice, task, jobId, isContinue, thinking } =
+    opts;
+  const { wiki, sessionPage, outputPage } = pagesFor(userId, wikiChoice);
+
+  let lastEdit = 0;
+  const onProgress = async (msg: string) => {
+    const now = Date.now();
+    if (now - lastEdit < 2000) return;
+    lastEdit = now;
+    await interaction.editReply({ content: msg, embeds: [] }).catch(() => {});
+  };
+
+  try {
+    const result = await runJob({
+      wiki,
+      task,
+      sessionPage,
+      outputPage,
+      jobId,
+      isContinue,
+      thinking,
+      onProgress,
+    });
+
+    const proposals = await listProposals(wiki, outputPage, { jobId }).catch(
+      () => [],
+    );
+
+    const embed = new EmbedBuilder()
+      .setColor(0xb9afce)
+      .setTitle(isContinue ? "Job continued" : "Job complete")
+      .setDescription(result.summary.slice(0, 4000))
+      .addFields(
+        { name: "Wiki", value: wiki.sitename, inline: true },
+        { name: "Job", value: `\`${jobId}\``, inline: true },
+        { name: "Steps", value: String(result.steps), inline: true },
+        {
+          name: "Context",
+          value: formatContextUsage(
+            result.peakPromptTokens,
+            result.contextLimit,
+          ),
+          inline: true,
+        },
+        {
+          name: "Session",
+          value: `[${result.sessionPage}](${result.sessionUrl})`,
+        },
+        {
+          name: "Output",
+          value: `[${result.outputPage}](${result.outputUrl})`,
+        },
+      );
+
+    if (proposals.length > 1) {
+      embed.addFields({
+        name: "Drafts",
+        value: proposals
+          .map((p) => `• ${p.target} (\`${p.id}\`)`)
+          .join("\n")
+          .slice(0, 1024),
+      });
+    }
+
+    const components: ActionRowBuilder<
+      ButtonBuilder | StringSelectMenuBuilder
+    >[] = [];
+
+    if (proposals.length === 1) {
+      components.push(actionButtons(userId, wiki.choice, proposals[0].id));
+    } else if (proposals.length > 1) {
+      components.push(
+        new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
+          new StringSelectMenuBuilder()
+            .setCustomId(`job:pick:${userId}:${wiki.choice}`)
+            .setPlaceholder("Select a proposal")
+            .addOptions(
+              proposals.slice(0, 25).map((p) =>
+                new StringSelectMenuOptionBuilder()
+                  .setLabel(p.target.slice(0, 100))
+                  .setDescription(p.id.slice(0, 100))
+                  .setValue(p.id.slice(0, 100)),
+              ),
+            ),
+        ),
+      );
+    }
+    components.push(continueButton(userId, wiki.choice, jobId));
+
+    await interaction.editReply({
+      content: `${interaction.user}`,
+      embeds: [embed],
+      components,
+    });
+  } catch (err) {
+    console.error(`[job ${jobId}]`, err);
+    const message = err instanceof Error ? err.message : String(err);
+    await interaction.editReply({
+      content: `${interaction.user} **Job failed:** ${message.slice(0, 1800)}`,
+      embeds: [],
+      components: [],
+    });
+  }
+}
+
+function missingAgentEnv(): string[] {
+  return [
+    "LLM_API_KEY",
+    "LLM_BASE_URL",
+    "LLM_MODEL",
+    "WIKI_BOT_USERNAME",
+    "WIKI_BOT_PASSWORD",
+  ].filter((k) => !process.env[k]);
 }
 
 async function runSession(
@@ -189,7 +353,7 @@ async function runSession(
     const output = info.get(outputPage) ?? { exists: false, length: 0 };
     const size = (p: { exists: boolean; length: number }) =>
       p.exists ? `${p.length.toLocaleString()} bytes` : "does not exist yet";
-    const proposals = await listProposals(wiki, outputPage, true);
+    const proposals = await listProposals(wiki, outputPage, { all: true });
 
     await interaction.editReply({
       embeds: [
@@ -213,7 +377,7 @@ async function runSession(
                   ? proposals
                       .map(
                         (p) =>
-                          `• [${p.target}](${pageUrl(wiki, p.draftTitle)}) - ${p.status}`,
+                          `• [${p.target}](${pageUrl(wiki, p.draftTitle)}) \`${p.id}\` · job \`${p.jobId}\` · ${p.status}`,
                       )
                       .join("\n")
                       .slice(0, 1024)
@@ -262,13 +426,7 @@ async function runClear(
 async function runTask(
   interaction: ChatInputCommandInteraction,
 ): Promise<void> {
-  const needed = [
-    "LLM_API_KEY",
-    "LLM_BASE_URL",
-    "LLM_MODEL",
-    "WIKI_BOT_USERNAME",
-    "WIKI_BOT_PASSWORD",
-  ].filter((k) => !process.env[k]);
+  const needed = missingAgentEnv();
   if (needed.length) {
     await interaction.reply({
       content: `**Job agent is not configured** (missing: ${needed.join(", ")}).`,
@@ -279,114 +437,105 @@ async function runTask(
 
   const task = interaction.options.getString("task", true);
   const thinking = interaction.options.getBoolean("thinking") ?? true;
-  const { wiki, sessionPage, outputPage } = pagesOf(interaction);
-  const jobId = `${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
+  const existing = interaction.options.getString("job")?.trim();
+  const jobId = existing || newJobId();
 
   await interaction.deferReply();
+  await runAgentJob({
+    interaction,
+    userId: interaction.user.id,
+    wikiChoice: interaction.options.getString("wiki") ?? "tds",
+    task,
+    jobId,
+    isContinue: !!existing,
+    thinking,
+  });
+}
 
-  let lastEdit = 0;
-  const onProgress = async (msg: string) => {
-    const now = Date.now();
-    if (now - lastEdit < 2000) return;
-    lastEdit = now;
-    await interaction.editReply({ content: msg, embeds: [] }).catch(() => {});
-  };
+export async function handleJobContinueButton(
+  interaction: ButtonInteraction,
+): Promise<void> {
+  const id = parseJobId(interaction.customId);
+  if (!id || id.kind !== "continue" || !id.draftId) return;
 
-  try {
-    const result = await runJob({
-      wiki,
-      task,
-      sessionPage,
-      outputPage,
-      jobId,
-      thinking,
-      onProgress,
+  if (interaction.user.id !== id.ownerId) {
+    await interaction.reply({
+      content: "Only the user who ran this job can continue it.",
+      flags: MessageFlags.Ephemeral,
     });
-
-    const proposals = await listProposals(wiki, outputPage).catch(() => []);
-
-    const embed = new EmbedBuilder()
-      .setColor(0xb9afce)
-      .setTitle("Job complete")
-      .setDescription(result.summary.slice(0, 4000))
-      .addFields(
-        { name: "Wiki", value: wiki.sitename, inline: true },
-        { name: "Steps", value: String(result.steps), inline: true },
-        {
-          name: "Context",
-          value: formatContextUsage(
-            result.peakPromptTokens,
-            result.contextLimit,
-          ),
-          inline: true,
-        },
-        {
-          name: "Session",
-          value: `[${result.sessionPage}](${result.sessionUrl})`,
-        },
-        {
-          name: "Output",
-          value: `[${result.outputPage}](${result.outputUrl})`,
-        },
-      );
-
-    if (proposals.length > 1) {
-      embed.addFields({
-        name: "Drafts",
-        value: proposals
-          .map((p) => `• ${p.target}`)
-          .join("\n")
-          .slice(0, 1024),
-      });
-    }
-
-    const uid = interaction.user.id;
-    const components: ActionRowBuilder<
-      ButtonBuilder | StringSelectMenuBuilder
-    >[] = [];
-
-    if (proposals.length === 1) {
-      components.push(actionButtons(uid, wiki.choice, 0));
-    } else if (proposals.length > 1) {
-      components.push(
-        new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
-          new StringSelectMenuBuilder()
-            .setCustomId(`job:pick:${uid}:${wiki.choice}`)
-            .setPlaceholder("Select a proposal")
-            .addOptions(
-              proposals
-                .slice(0, 25)
-                .map((p, i) =>
-                  new StringSelectMenuOptionBuilder()
-                    .setLabel(p.target.slice(0, 100))
-                    .setValue(String(i)),
-                ),
-            ),
-        ),
-      );
-    }
-
-    await interaction.editReply({
-      content: `${interaction.user}`,
-      embeds: [embed],
-      components,
-    });
-  } catch (err) {
-    console.error(`[job ${jobId}]`, err);
-    const message = err instanceof Error ? err.message : String(err);
-    await interaction.editReply({
-      content: `${interaction.user} **Job failed:** ${message.slice(0, 1800)}`,
-      embeds: [],
-      components: [],
-    });
+    return;
   }
+
+  const modal = new ModalBuilder()
+    .setCustomId(
+      `job:continue-modal:${id.ownerId}:${id.wikiChoice}:${id.draftId}`,
+    )
+    .setTitle("Continue job")
+    .addLabelComponents(
+      new LabelBuilder()
+        .setLabel("Follow-up task")
+        .setTextInputComponent(
+          new TextInputBuilder()
+            .setCustomId("task")
+            .setStyle(TextInputStyle.Paragraph)
+            .setRequired(true)
+            .setMinLength(1)
+            .setMaxLength(2000),
+        ),
+    );
+
+  await interaction.showModal(modal);
+}
+
+export async function handleJobContinueModal(
+  interaction: ModalSubmitInteraction,
+): Promise<void> {
+  const id = parseJobId(interaction.customId);
+  if (!id || id.kind !== "continue-modal" || !id.draftId) return;
+
+  if (interaction.user.id !== id.ownerId) {
+    await interaction.reply({
+      content: "Only the user who ran this job can continue it.",
+      flags: MessageFlags.Ephemeral,
+    });
+    return;
+  }
+
+  const needed = missingAgentEnv();
+  if (needed.length) {
+    await interaction.reply({
+      content: `**Job agent is not configured** (missing: ${needed.join(", ")}).`,
+      flags: MessageFlags.Ephemeral,
+    });
+    return;
+  }
+
+  const task = interaction.fields.getTextInputValue("task").trim();
+  if (!task) {
+    await interaction.reply({
+      content: "Task cannot be empty.",
+      flags: MessageFlags.Ephemeral,
+    });
+    return;
+  }
+
+  await interaction.deferReply();
+  await runAgentJob({
+    interaction,
+    userId: id.ownerId,
+    wikiChoice: id.wikiChoice,
+    task,
+    jobId: id.draftId,
+    isContinue: true,
+    thinking: true,
+  });
 }
 
 function parseJobId(customId: string): {
   kind: string;
   ownerId: string;
   wikiChoice: string;
-  index: number;
+  draftId: string;
 } | null {
   const parts = customId.split(":");
   if (parts[0] !== "job" || parts.length < 4) return null;
@@ -394,7 +543,7 @@ function parseJobId(customId: string): {
     kind: parts[1],
     ownerId: parts[2],
     wikiChoice: parts[3],
-    index: parts[4] !== undefined ? Number(parts[4]) : 0,
+    draftId: parts.slice(4).join(":"),
   };
 }
 
@@ -404,12 +553,13 @@ export async function handleJobPickMenu(
   const id = parseJobId(interaction.customId);
   if (!id || id.kind !== "pick") return;
 
-  const index = Number(interaction.values[0]);
-  if (!Number.isFinite(index)) return;
+  const draftId = interaction.values[0];
+  if (!draftId) return;
 
   const { wiki, outputPage } = pagesFor(id.ownerId, id.wikiChoice);
-  const proposals = await listProposals(wiki, outputPage).catch(() => []);
-  const p = proposals[index];
+  const p = (await listProposals(wiki, outputPage).catch(() => [])).find(
+    (x) => x.id === draftId,
+  );
   if (!p) {
     await interaction.reply({
       content: "That draft is no longer available.",
@@ -421,21 +571,21 @@ export async function handleJobPickMenu(
   const canApprove = interaction.user.id === id.ownerId;
   const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
     new ButtonBuilder()
-      .setCustomId(`job:diff:${id.ownerId}:${id.wikiChoice}:${index}`)
+      .setCustomId(`job:diff:${id.ownerId}:${id.wikiChoice}:${p.id}`)
       .setLabel("Diff")
       .setStyle(ButtonStyle.Secondary),
   );
   if (canApprove) {
     row.addComponents(
       new ButtonBuilder()
-        .setCustomId(`job:approve:${id.ownerId}:${id.wikiChoice}:${index}`)
+        .setCustomId(`job:approve:${id.ownerId}:${id.wikiChoice}:${p.id}`)
         .setLabel("Approve")
         .setStyle(ButtonStyle.Danger),
     );
   }
 
   await interaction.reply({
-    content: `**${p.target}** - [draft](${pageUrl(wiki, p.draftTitle)})`,
+    content: `**${p.target}** · [draft](${pageUrl(wiki, p.draftTitle)})`,
     components: [row],
     flags: MessageFlags.Ephemeral,
   });
@@ -445,11 +595,11 @@ export async function handleJobDiffButton(
   interaction: ButtonInteraction,
 ): Promise<void> {
   const id = parseJobId(interaction.customId);
-  if (!id || id.kind !== "diff") return;
+  if (!id || id.kind !== "diff" || !id.draftId) return;
 
   await interaction.deferReply({ flags: MessageFlags.Ephemeral });
   const { wiki, outputPage } = pagesFor(id.ownerId, id.wikiChoice);
-  const proposal = await loadProposal(wiki, outputPage, id.index);
+  const proposal = await loadProposal(wiki, outputPage, id.draftId);
   if (!proposal) {
     await interaction.editReply({ content: "Draft not found." });
     return;
@@ -491,7 +641,7 @@ export async function handleJobApproveButton(
   interaction: ButtonInteraction,
 ): Promise<void> {
   const id = parseJobId(interaction.customId);
-  if (!id || id.kind !== "approve") return;
+  if (!id || id.kind !== "approve" || !id.draftId) return;
 
   if (interaction.user.id !== id.ownerId) {
     await interaction.reply({
@@ -502,7 +652,9 @@ export async function handleJobApproveButton(
   }
 
   const modal = new ModalBuilder()
-    .setCustomId(`job:approve-modal:${id.ownerId}:${id.wikiChoice}:${id.index}`)
+    .setCustomId(
+      `job:approve-modal:${id.ownerId}:${id.wikiChoice}:${id.draftId}`,
+    )
     .setTitle("Confirm publish")
     .addLabelComponents(
       new LabelBuilder()
@@ -526,7 +678,7 @@ export async function handleJobApproveModal(
   interaction: ModalSubmitInteraction,
 ): Promise<void> {
   const id = parseJobId(interaction.customId);
-  if (!id || id.kind !== "approve-modal") return;
+  if (!id || id.kind !== "approve-modal" || !id.draftId) return;
 
   if (interaction.user.id !== id.ownerId) {
     await interaction.reply({
@@ -549,7 +701,7 @@ export async function handleJobApproveModal(
   const { wiki, outputPage } = pagesFor(id.ownerId, id.wikiChoice);
 
   try {
-    const proposal = await loadProposal(wiki, outputPage, id.index);
+    const proposal = await loadProposal(wiki, outputPage, id.draftId);
     if (!proposal) {
       await interaction.editReply({ content: "Draft not found." });
       return;
@@ -561,7 +713,7 @@ export async function handleJobApproveModal(
       proposal.body,
       `Approved by ${interaction.user.tag} (${interaction.user.id}) via /job`,
     );
-    await markDraftApplied(wiki, outputPage, proposal.target);
+    await markDraftApplied(wiki, outputPage, proposal.id);
 
     if (interaction.message?.editable) {
       await interaction.message.edit({ components: [] }).catch(() => {});

@@ -39,15 +39,24 @@ export async function handleInteraction(
       await handleJobApproveButton(interaction);
       return;
     }
+    if (interaction.customId.startsWith("job:continue:")) {
+      const { handleJobContinueButton } = await import("../commands/job.js");
+      await handleJobContinueButton(interaction);
+      return;
+    }
   }
 
-  if (
-    interaction.isModalSubmit() &&
-    interaction.customId.startsWith("job:approve-modal:")
-  ) {
-    const { handleJobApproveModal } = await import("../commands/job.js");
-    await handleJobApproveModal(interaction);
-    return;
+  if (interaction.isModalSubmit()) {
+    if (interaction.customId.startsWith("job:approve-modal:")) {
+      const { handleJobApproveModal } = await import("../commands/job.js");
+      await handleJobApproveModal(interaction);
+      return;
+    }
+    if (interaction.customId.startsWith("job:continue-modal:")) {
+      const { handleJobContinueModal } = await import("../commands/job.js");
+      await handleJobContinueModal(interaction);
+      return;
+    }
   }
 
   if (!interaction.isChatInputCommand()) return;
