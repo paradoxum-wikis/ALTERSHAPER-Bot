@@ -16,6 +16,7 @@ export function systemPrompt(
     `<!-- aphonos-target: PageTitle -->`,
     `plus the full replacement wikitext for that page (so a human can approve publish later).`,
     `If the Neow template is used on a page, check the Help:Neowtext page to learn about it.`,
+    `Articles often have 2 empty new lines above navboxes, you should ignore this as it's convention.`,
     `Put scratch notes and status on the session page, but put the result the user should review on the output page.`,
     `Short Q&A can stay in the Discord summary without writing. Finish with a short Discord-facing summary and mention the output page when you wrote one.`,
   ].join("\n");
