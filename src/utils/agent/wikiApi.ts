@@ -260,7 +260,8 @@ export interface OutputDraft {
   id: string;
   jobId: string;
   target: string;
-  status: "pending" | "applied";
+  status: "pending" | "applied" | "rejected";
+  reason?: string;
 }
 
 export interface OutputIndex {
@@ -281,20 +282,24 @@ export async function getOutputIndex(
   }
 }
 
-export async function markDraftApplied(
+export async function setDraftStatus(
   wiki: WikiConfig,
   title: string,
   draftId: string,
+  status: "applied" | "rejected",
+  reason?: string,
 ): Promise<void> {
   const index = await getOutputIndex(wiki, title);
   const draft = index.drafts.find((d) => d.id === draftId);
-  if (!draft || draft.status === "applied") return;
-  draft.status = "applied";
+  if (!draft || draft.status === status) return;
+  draft.status = status;
+  if (status === "rejected") draft.reason = reason ?? "";
+  else delete draft.reason;
   await publishPage(
     wiki,
     title,
     JSON.stringify(index),
-    `Mark applied: ${draftId}`,
+    `Mark ${status}: ${draftId}`,
   );
 }
 

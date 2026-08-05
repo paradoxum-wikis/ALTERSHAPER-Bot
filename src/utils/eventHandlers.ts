@@ -39,6 +39,11 @@ export async function handleInteraction(
       await handleJobApproveButton(interaction);
       return;
     }
+    if (interaction.customId.startsWith("job:reject:")) {
+      const { handleJobRejectButton } = await import("../commands/job.js");
+      await handleJobRejectButton(interaction);
+      return;
+    }
     if (interaction.customId.startsWith("job:continue:")) {
       const { handleJobContinueButton } = await import("../commands/job.js");
       await handleJobContinueButton(interaction);
@@ -50,6 +55,11 @@ export async function handleInteraction(
     if (interaction.customId.startsWith("job:approve-modal:")) {
       const { handleJobApproveModal } = await import("../commands/job.js");
       await handleJobApproveModal(interaction);
+      return;
+    }
+    if (interaction.customId.startsWith("job:reject-modal:")) {
+      const { handleJobRejectModal } = await import("../commands/job.js");
+      await handleJobRejectModal(interaction);
       return;
     }
     if (interaction.customId.startsWith("job:continue-modal:")) {

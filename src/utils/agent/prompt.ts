@@ -20,6 +20,7 @@ export function systemPrompt(
     `Never edit live pages besides your own user subpages.`,
     `Output schema: {"drafts":[{"id":"shortId","jobId":"thisJobId","target":"Exact Page Title","status":"pending"}]}`,
     `Each draft: short unique id (4–8 alphanum), jobId exactly as given in the user message, target = live title. Draft page is \`${outputPage}/<id>\`. Same target may use multiple ids.`,
+    `Statuses you write: pending only. applied/rejected (+ reason) are set by the bot after review.`,
     `get-page Output first; keep existing drafts and append yours. Write each draft page, then write Output JSON.`,
     `Each draft starts with \`<!-- aphonos-target: Exact Page Title -->\` then the full replacement wikitext.`,
     `If a page uses Neow templates, read Help:Neowtext first.`,
@@ -43,7 +44,7 @@ export function userPrompt(
     `Drafts: \`${outputPage}/<id>\``,
     `Job id: \`${jobId}\``,
     isContinue
-      ? `Continue this job: work from its drafts in Output; keep jobId \`${jobId}\` on drafts you write or update.`
+      ? `Continue job \`${jobId}\`: read its drafts in Output. For status rejected, fix the draft using reason, then set status pending and clear reason. Keep jobId \`${jobId}\`.`
       : "",
     ``,
     `Task: ${task}`,

@@ -26,8 +26,8 @@ import {
   getPageInfo,
   getPageWikitext,
   listSubpages,
-  markDraftApplied,
   publishPage,
+  setDraftStatus,
 } from "../utils/agent/wikiApi.js";
 import {
   comparePagesUrl,
@@ -47,7 +47,8 @@ type Proposal = {
   jobId: string;
   draftTitle: string;
   target: string;
-  status: "pending" | "applied";
+  status: "pending" | "applied" | "rejected";
+  reason?: string;
 };
 
 const addWikiOption = (o: SlashCommandStringOption) =>
@@ -153,6 +154,7 @@ async function listProposals(
       draftTitle: `${outputRoot}/${d.id}`,
       target: d.target,
       status: d.status,
+      reason: d.reason,
     }));
 }
 
@@ -160,7 +162,12 @@ async function loadProposal(
   wiki: WikiConfig,
   outputRoot: string,
   draftId: string,
-): Promise<{ id: string; target: string; body: string; draftTitle: string } | null> {
+): Promise<{
+  id: string;
+  target: string;
+  body: string;
+  draftTitle: string;
+} | null> {
   const item = (await getOutputIndex(wiki, outputRoot)).drafts.find(
     (d) => d.id === draftId,
   );
@@ -188,6 +195,10 @@ function actionButtons(ownerId: string, wikiChoice: string, draftId: string) {
       .setCustomId(`job:approve:${ownerId}:${wikiChoice}:${draftId}`)
       .setLabel("Approve")
       .setStyle(ButtonStyle.Danger),
+    new ButtonBuilder()
+      .setCustomId(`job:reject:${ownerId}:${wikiChoice}:${draftId}`)
+      .setLabel("Reject")
+      .setStyle(ButtonStyle.Secondary),
   );
 }
 
@@ -204,9 +215,7 @@ function newJobId() {
   return `${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
 }
 
-type JobReply =
-  | ChatInputCommandInteraction
-  | ModalSubmitInteraction;
+type JobReply = ChatInputCommandInteraction | ModalSubmitInteraction;
 
 async function runAgentJob(opts: {
   interaction: JobReply;
@@ -294,12 +303,14 @@ async function runAgentJob(opts: {
             .setCustomId(`job:pick:${userId}:${wiki.choice}`)
             .setPlaceholder("Select a proposal")
             .addOptions(
-              proposals.slice(0, 25).map((p) =>
-                new StringSelectMenuOptionBuilder()
-                  .setLabel(p.target.slice(0, 100))
-                  .setDescription(p.id.slice(0, 100))
-                  .setValue(p.id.slice(0, 100)),
-              ),
+              proposals
+                .slice(0, 25)
+                .map((p) =>
+                  new StringSelectMenuOptionBuilder()
+                    .setLabel(p.target.slice(0, 100))
+                    .setDescription(p.id.slice(0, 100))
+                    .setValue(p.id.slice(0, 100)),
+                ),
             ),
         ),
       );
@@ -375,10 +386,13 @@ async function runSession(
               value:
                 proposals.length > 0
                   ? proposals
-                      .map(
-                        (p) =>
-                          `• [${p.target}](${pageUrl(wiki, p.draftTitle)}) \`${p.id}\` · job \`${p.jobId}\` · ${p.status}`,
-                      )
+                      .map((p) => {
+                        const reason =
+                          p.status === "rejected" && p.reason
+                            ? ` — ${p.reason}`
+                            : "";
+                        return `• [${p.target}](${pageUrl(wiki, p.draftTitle)}) \`${p.id}\` - job \`${p.jobId}\` - ${p.status}${reason}`;
+                      })
                       .join("\n")
                       .slice(0, 1024)
                   : "—",
@@ -568,24 +582,18 @@ export async function handleJobPickMenu(
     return;
   }
 
-  const canApprove = interaction.user.id === id.ownerId;
-  const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-    new ButtonBuilder()
-      .setCustomId(`job:diff:${id.ownerId}:${id.wikiChoice}:${p.id}`)
-      .setLabel("Diff")
-      .setStyle(ButtonStyle.Secondary),
-  );
-  if (canApprove) {
-    row.addComponents(
-      new ButtonBuilder()
-        .setCustomId(`job:approve:${id.ownerId}:${id.wikiChoice}:${p.id}`)
-        .setLabel("Approve")
-        .setStyle(ButtonStyle.Danger),
-    );
-  }
+  const row =
+    interaction.user.id === id.ownerId
+      ? actionButtons(id.ownerId, id.wikiChoice, p.id)
+      : new ActionRowBuilder<ButtonBuilder>().addComponents(
+          new ButtonBuilder()
+            .setCustomId(`job:diff:${id.ownerId}:${id.wikiChoice}:${p.id}`)
+            .setLabel("Diff")
+            .setStyle(ButtonStyle.Secondary),
+        );
 
   await interaction.reply({
-    content: `**${p.target}** · [draft](${pageUrl(wiki, p.draftTitle)})`,
+    content: `**${p.target}** - [draft](${pageUrl(wiki, p.draftTitle)})`,
     components: [row],
     flags: MessageFlags.Ephemeral,
   });
@@ -713,7 +721,7 @@ export async function handleJobApproveModal(
       proposal.body,
       `Approved by ${interaction.user.tag} (${interaction.user.id}) via /job`,
     );
-    await markDraftApplied(wiki, outputPage, proposal.id);
+    await setDraftStatus(wiki, outputPage, proposal.id, "applied");
 
     if (interaction.message?.editable) {
       await interaction.message.edit({ components: [] }).catch(() => {});
@@ -727,6 +735,92 @@ export async function handleJobApproveModal(
     const message = err instanceof Error ? err.message : String(err);
     await interaction.editReply({
       content: `**Publish failed:** ${message.slice(0, 1500)}`,
+    });
+  }
+}
+
+export async function handleJobRejectButton(
+  interaction: ButtonInteraction,
+): Promise<void> {
+  const id = parseJobId(interaction.customId);
+  if (!id || id.kind !== "reject" || !id.draftId) return;
+
+  if (interaction.user.id !== id.ownerId) {
+    await interaction.reply({
+      content: "Only the user who ran this job can reject it.",
+      flags: MessageFlags.Ephemeral,
+    });
+    return;
+  }
+
+  const modal = new ModalBuilder()
+    .setCustomId(
+      `job:reject-modal:${id.ownerId}:${id.wikiChoice}:${id.draftId}`,
+    )
+    .setTitle("Reject draft")
+    .addLabelComponents(
+      new LabelBuilder()
+        .setLabel("Reason")
+        .setDescription("Used when you continue this job")
+        .setTextInputComponent(
+          new TextInputBuilder()
+            .setCustomId("reason")
+            .setStyle(TextInputStyle.Paragraph)
+            .setRequired(true)
+            .setMinLength(1)
+            .setMaxLength(1000),
+        ),
+    );
+
+  await interaction.showModal(modal);
+}
+
+export async function handleJobRejectModal(
+  interaction: ModalSubmitInteraction,
+): Promise<void> {
+  const id = parseJobId(interaction.customId);
+  if (!id || id.kind !== "reject-modal" || !id.draftId) return;
+
+  if (interaction.user.id !== id.ownerId) {
+    await interaction.reply({
+      content: "Only the user who ran this job can reject it.",
+      flags: MessageFlags.Ephemeral,
+    });
+    return;
+  }
+
+  const reason = interaction.fields.getTextInputValue("reason").trim();
+  if (!reason) {
+    await interaction.reply({
+      content: "Reason cannot be empty.",
+      flags: MessageFlags.Ephemeral,
+    });
+    return;
+  }
+
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+  const { wiki, outputPage } = pagesFor(id.ownerId, id.wikiChoice);
+
+  try {
+    const proposal = await loadProposal(wiki, outputPage, id.draftId);
+    if (!proposal) {
+      await interaction.editReply({ content: "Draft not found." });
+      return;
+    }
+
+    await setDraftStatus(wiki, outputPage, proposal.id, "rejected", reason);
+
+    if (interaction.message?.editable) {
+      await interaction.message.edit({ components: [] }).catch(() => {});
+    }
+
+    await interaction.editReply({
+      content: `Rejected **${proposal.target}** (\`${proposal.id}\`): ${reason.slice(0, 500)}`,
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    await interaction.editReply({
+      content: `**Reject failed:** ${message.slice(0, 1500)}`,
     });
   }
 }
