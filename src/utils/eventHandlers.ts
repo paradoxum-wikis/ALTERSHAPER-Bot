@@ -34,7 +34,10 @@ export async function handleInteraction(
       await handleJobDiffButton(interaction);
       return;
     }
-    if (interaction.customId.startsWith("job:approve:")) {
+    if (
+      interaction.customId.startsWith("job:approve-all:") ||
+      interaction.customId.startsWith("job:approve:")
+    ) {
       const { handleJobApproveButton } = await import("../commands/job.js");
       await handleJobApproveButton(interaction);
       return;
@@ -52,7 +55,10 @@ export async function handleInteraction(
   }
 
   if (interaction.isModalSubmit()) {
-    if (interaction.customId.startsWith("job:approve-modal:")) {
+    if (
+      interaction.customId.startsWith("job:approve-all-modal:") ||
+      interaction.customId.startsWith("job:approve-modal:")
+    ) {
       const { handleJobApproveModal } = await import("../commands/job.js");
       await handleJobApproveModal(interaction);
       return;

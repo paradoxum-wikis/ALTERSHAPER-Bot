@@ -343,15 +343,21 @@ async function runAgentJob(opts: {
                 : "Select a proposal",
             )
             .addOptions(
-              proposals
-                .slice(0, 25)
-                .map((p) =>
-                  new StringSelectMenuOptionBuilder()
-                    .setLabel(p.target.slice(0, 100))
-                    .setDescription(p.id.slice(0, 100))
-                    .setValue(p.id.slice(0, 100)),
-                ),
+              proposals.slice(0, 25).map((p) =>
+                new StringSelectMenuOptionBuilder()
+                  .setLabel(p.target.slice(0, 100))
+                  .setDescription(p.id.slice(0, 100))
+                  .setValue(p.id.slice(0, 100)),
+              ),
             ),
+        ),
+      );
+      components.push(
+        new ActionRowBuilder<ButtonBuilder>().addComponents(
+          new ButtonBuilder()
+            .setCustomId(`job:approve-all:${userId}:${wiki.choice}:${jobId}`)
+            .setLabel("Approve all")
+            .setStyle(ButtonStyle.Danger),
         ),
       );
     }
@@ -623,29 +629,36 @@ export async function handleJobDiffButton(interaction: ButtonInteraction) {
   }
 }
 
+function agreeModal(customId: string) {
+  return new ModalBuilder()
+    .setCustomId(customId)
+    .setTitle("Confirm publish")
+    .addLabelComponents(
+      new LabelBuilder()
+        .setLabel(`Please type: '${AGREE}'`)
+        .setDescription("You accept full liability for this publish")
+        .setTextInputComponent(
+          new TextInputBuilder()
+            .setCustomId("liability")
+            .setPlaceholder(AGREE)
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true)
+            .setMinLength(AGREE.length)
+            .setMaxLength(32),
+        ),
+    );
+}
+
 export async function handleJobApproveButton(interaction: ButtonInteraction) {
   const id = parseCid(interaction.customId);
-  if (!id || id.kind !== "approve" || !id.key) return;
+  if (!id || (id.kind !== "approve" && id.kind !== "approve-all") || !id.key)
+    return;
   if (await denyUnlessOwner(interaction, id.ownerId)) return;
 
   await interaction.showModal(
-    new ModalBuilder()
-      .setCustomId(`job:approve-modal:${id.ownerId}:${id.wikiChoice}:${id.key}`)
-      .setTitle("Confirm publish")
-      .addLabelComponents(
-        new LabelBuilder()
-          .setLabel(`Please type: '${AGREE}'`)
-          .setDescription("You accept full liability for this publish")
-          .setTextInputComponent(
-            new TextInputBuilder()
-              .setCustomId("liability")
-              .setPlaceholder(AGREE)
-              .setStyle(TextInputStyle.Short)
-              .setRequired(true)
-              .setMinLength(AGREE.length)
-              .setMaxLength(32),
-          ),
-      ),
+    agreeModal(
+      `job:${id.kind}-modal:${id.ownerId}:${id.wikiChoice}:${id.key}`,
+    ),
   );
 }
 
@@ -653,7 +666,12 @@ export async function handleJobApproveModal(
   interaction: ModalSubmitInteraction,
 ) {
   const id = parseCid(interaction.customId);
-  if (!id || id.kind !== "approve-modal" || !id.key) return;
+  if (
+    !id ||
+    (id.kind !== "approve-modal" && id.kind !== "approve-all-modal") ||
+    !id.key
+  )
+    return;
   if (await denyUnlessOwner(interaction, id.ownerId)) return;
 
   const typed = interaction.fields.getTextInputValue("liability").trim();
@@ -667,8 +685,41 @@ export async function handleJobApproveModal(
 
   await interaction.deferReply({ flags: MessageFlags.Ephemeral });
   const { wiki, outputPage } = pagesFor(id.ownerId, id.wikiChoice);
+  const summary = `Approved by ${interaction.user.tag} (${interaction.user.id}) via /job`;
 
   try {
+    if (id.kind === "approve-all-modal") {
+      const index = await getOutputIndex(wiki, outputPage);
+      const pending = index.drafts.filter(
+        (d) => d.id && d.jobId === id.key && d.status === "pending",
+      );
+      const items: { draftId: string; target: string; body: string }[] = [];
+      for (const d of pending) {
+        const wt = await getPageWikitext(wiki, `${outputPage}/${d.id}`);
+        if (!wt?.trim()) continue;
+        const p = parseOutputTarget(wt);
+        if (!p) continue;
+        items.push({ draftId: d.id, target: d.target, body: p.body });
+      }
+      if (!items.length) {
+        await interaction.editReply({ content: "No pending drafts." });
+        return;
+      }
+      await publishAndApply(wiki, {
+        indexTitle: outputPage,
+        index,
+        summary,
+        items,
+      });
+      const lines = items.map(
+        (i) => `[${i.target}](${pageUrl(wiki, i.target)})`,
+      );
+      await interaction.editReply({
+        content: `Published ${items.length}:\n${lines.join("\n").slice(0, 1800)}`,
+      });
+      return;
+    }
+
     const proposal = await loadProposal(wiki, outputPage, id.key);
     if (!proposal) {
       await interaction.editReply({ content: "Draft not found." });
@@ -676,12 +727,16 @@ export async function handleJobApproveModal(
     }
 
     await publishAndApply(wiki, {
-      target: proposal.target,
-      body: proposal.body,
-      summary: `Approved by ${interaction.user.tag} (${interaction.user.id}) via /job`,
       indexTitle: outputPage,
-      draftId: proposal.id,
       index: proposal.index,
+      summary,
+      items: [
+        {
+          draftId: proposal.id,
+          target: proposal.target,
+          body: proposal.body,
+        },
+      ],
     });
 
     await interaction.editReply({

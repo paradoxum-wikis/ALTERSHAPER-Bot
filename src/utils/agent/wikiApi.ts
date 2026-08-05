@@ -345,32 +345,30 @@ export async function setDraftStatus(
 export async function publishAndApply(
   wiki: WikiConfig,
   opts: {
-    target: string;
-    body: string;
-    summary: string;
     indexTitle: string;
-    draftId: string;
     index: OutputIndex;
+    summary: string;
+    items: { draftId: string; target: string; body: string }[];
   },
 ): Promise<void> {
-  const draft = opts.index.drafts.find((d) => d.id === opts.draftId);
-  if (draft) {
-    draft.status = "applied";
-    delete draft.reason;
+  if (!opts.items.length) return;
+  const auth = await session(wiki);
+  for (const item of opts.items) {
+    await editWith(wiki, auth, item.target, item.body, opts.summary, false);
+    const draft = opts.index.drafts.find((d) => d.id === item.draftId);
+    if (draft) {
+      draft.status = "applied";
+      delete draft.reason;
+    }
   }
-  await editPages(wiki, [
-    {
-      title: opts.target,
-      text: opts.body,
-      summary: opts.summary,
-      bot: false,
-    },
-    {
-      title: opts.indexTitle,
-      text: JSON.stringify(opts.index),
-      summary: `Mark applied: ${opts.draftId}`,
-    },
-  ]);
+  const ids = opts.items.map((i) => i.draftId).join(", ");
+  await editWith(
+    wiki,
+    auth,
+    opts.indexTitle,
+    JSON.stringify(opts.index),
+    `Mark applied: ${ids}`,
+  );
 }
 
 export interface CompareResult {
