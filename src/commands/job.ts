@@ -65,7 +65,13 @@ export const data = new SlashCommandBuilder()
           .setDescription("What the agent should do")
           .setRequired(true),
       )
-      .addStringOption(addWikiOption),
+      .addStringOption(addWikiOption)
+      .addBooleanOption((o) =>
+        o
+          .setName("thinking")
+          .setDescription("Enable thinking mode for agent (defaults to true)")
+          .setRequired(false),
+      ),
   )
   .addSubcommand((sc) =>
     sc
@@ -292,6 +298,7 @@ async function runTask(
   }
 
   const task = interaction.options.getString("task", true);
+  const thinking = interaction.options.getBoolean("thinking") ?? true;
   const { wiki, sessionPage, outputPage } = pagesOf(interaction);
   const jobId = `${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
 
@@ -312,6 +319,7 @@ async function runTask(
       sessionPage,
       outputPage,
       jobId,
+      thinking,
       onProgress,
     });
 

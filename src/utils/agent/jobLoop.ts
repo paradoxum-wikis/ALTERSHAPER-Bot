@@ -23,6 +23,7 @@ export interface JobInput {
   sessionPage: string;
   outputPage: string;
   jobId: string;
+  thinking?: boolean;
   onProgress?: (msg: string) => void | Promise<void>;
 }
 
@@ -61,6 +62,7 @@ export async function runJob(input: JobInput): Promise<JobResult> {
   const mcp = new McpSession();
   const started = Date.now();
   const model = requireEnv("LLM_MODEL");
+  const thinking = input.thinking !== false;
   let peakPromptTokens = 0;
 
   const result = (summary: string, steps: number): JobResult => ({
@@ -106,14 +108,17 @@ export async function runJob(input: JobInput): Promise<JobResult> {
         );
       }
 
-      await input.onProgress?.(`Thinking (step ${step}/${MAX_STEPS})...`);
+      await input.onProgress?.(
+        `${thinking ? "Thinking" : "Working"} (step ${step}/${MAX_STEPS})…`,
+      );
 
       const res = await client.chat.completions.create({
         model,
         messages,
         tools,
-        reasoning_effort: "high",
-        thinking: { type: "enabled" },
+        ...(thinking
+          ? { reasoning_effort: "high" as const, thinking: { type: "enabled" as const } }
+          : { thinking: { type: "disabled" as const } }),
       });
 
       peakPromptTokens = Math.max(
@@ -124,12 +129,14 @@ export async function runJob(input: JobInput): Promise<JobResult> {
       const msg = res.choices[0]?.message;
       if (!msg) throw new Error("Empty completion");
 
-      // tool turns 400 without it
+      // tool turns 400 without reasoning_content when thinking was on
       messages.push({
         role: "assistant",
         content: msg.content,
         tool_calls: msg.tool_calls,
-        reasoning_content: msg.reasoning_content,
+        ...(thinking && msg.reasoning_content != null
+          ? { reasoning_content: msg.reasoning_content }
+          : {}),
       });
 
       if (!msg.tool_calls?.length) {
