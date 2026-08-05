@@ -183,10 +183,30 @@ function actionButtons(ownerId: string, wikiChoice: string, draftId: string) {
   );
 }
 
-function continueRow(ownerId: string, wikiChoice: string, jobId: string) {
+function continueKey(jobId: string, thinking: boolean) {
+  return `${jobId}:${thinking ? "1" : "0"}`;
+}
+
+function parseContinueKey(key: string): { jobId: string; thinking: boolean } {
+  const i = key.lastIndexOf(":");
+  const flag = i === -1 ? "" : key.slice(i + 1);
+  if (flag === "0" || flag === "1") {
+    return { jobId: key.slice(0, i), thinking: flag === "1" };
+  }
+  return { jobId: key, thinking: true };
+}
+
+function continueRow(
+  ownerId: string,
+  wikiChoice: string,
+  jobId: string,
+  thinking: boolean,
+) {
   return new ActionRowBuilder<ButtonBuilder>().addComponents(
     new ButtonBuilder()
-      .setCustomId(`job:continue:${ownerId}:${wikiChoice}:${jobId}`)
+      .setCustomId(
+        `job:continue:${ownerId}:${wikiChoice}:${continueKey(jobId, thinking)}`,
+      )
       .setLabel("Continue")
       .setStyle(ButtonStyle.Primary),
   );
@@ -335,7 +355,7 @@ async function runAgentJob(opts: {
         ),
       );
     }
-    components.push(continueRow(userId, wiki.choice, jobId));
+    components.push(continueRow(userId, wiki.choice, jobId, thinking));
 
     await interaction.editReply({
       content: `${interaction.user}`,
@@ -508,15 +528,16 @@ export async function handleJobContinueModal(
     return;
   }
 
+  const { jobId, thinking } = parseContinueKey(id.key);
   await interaction.deferReply();
   await runAgentJob({
     interaction,
     userId: id.ownerId,
     wikiChoice: id.wikiChoice,
     task: interaction.fields.getTextInputValue("task").trim(),
-    jobId: id.key,
+    jobId,
     isContinue: true,
-    thinking: true,
+    thinking,
   });
 }
 
