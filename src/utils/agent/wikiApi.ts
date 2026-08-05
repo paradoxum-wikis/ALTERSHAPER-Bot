@@ -212,20 +212,18 @@ async function editWith(
   title: string,
   text: string,
   summary: string,
+  bot = true,
 ): Promise<void> {
-  const editRes = await post(
-    wiki.apiBase,
-    {
-      action: "edit",
-      title,
-      text,
-      summary,
-      token: auth.csrftoken,
-      format: "json",
-      bot: "1",
-    },
-    auth.cookie,
-  );
+  const params: Record<string, string> = {
+    action: "edit",
+    title,
+    text,
+    summary,
+    token: auth.csrftoken,
+    format: "json",
+  };
+  if (bot) params.bot = "1";
+  const editRes = await post(wiki.apiBase, params, auth.cookie);
 
   const result = editRes.json.edit as { result?: string } | undefined;
   if (result?.result !== "Success") {
@@ -239,12 +237,12 @@ async function editWith(
 
 async function editPages(
   wiki: WikiConfig,
-  edits: { title: string; text: string; summary: string }[],
+  edits: { title: string; text: string; summary: string; bot?: boolean }[],
 ) {
   if (!edits.length) return;
   const auth = await session(wiki);
   for (const e of edits) {
-    await editWith(wiki, auth, e.title, e.text, e.summary);
+    await editWith(wiki, auth, e.title, e.text, e.summary, e.bot !== false);
   }
 }
 
@@ -333,7 +331,12 @@ export async function publishAndApply(
     delete draft.reason;
   }
   await editPages(wiki, [
-    { title: opts.target, text: opts.body, summary: opts.summary },
+    {
+      title: opts.target,
+      text: opts.body,
+      summary: opts.summary,
+      bot: false,
+    },
     {
       title: opts.indexTitle,
       text: JSON.stringify(opts.index),
