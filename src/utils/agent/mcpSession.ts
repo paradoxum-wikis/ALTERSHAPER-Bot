@@ -9,7 +9,32 @@ import { mcpServerConfig } from "./wikis.js";
 
 const require = createRequire(import.meta.url);
 
-export class McpSession {
+let shared: McpSession | null = null;
+let connecting: Promise<McpSession> | null = null;
+
+export async function getMcpSession(): Promise<McpSession> {
+  if (shared) return shared;
+  if (!connecting) {
+    connecting = (async () => {
+      const s = new McpSession();
+      await s.connect();
+      shared = s;
+      return s;
+    })().finally(() => {
+      connecting = null;
+    });
+  }
+  return connecting;
+}
+
+export async function resetMcpSession(): Promise<void> {
+  const s = shared;
+  shared = null;
+  connecting = null;
+  if (s) await s.close();
+}
+
+class McpSession {
   #client: Client | null = null;
   #transport: StdioClientTransport | null = null;
   #configPath: string | null = null;
@@ -45,18 +70,26 @@ export class McpSession {
   }
 
   async callTool(name: string, args: Record<string, unknown>) {
-    const res = await this.#client!.callTool({ name, arguments: args });
-    const text = contentText(res.content);
-    return res.isError ? `Error: ${text}` : text;
+    try {
+      const res = await this.#client!.callTool({ name, arguments: args });
+      const text = contentText(res.content);
+      return res.isError ? `Error: ${text}` : text;
+    } catch (err) {
+      if (shared === this) {
+        shared = null;
+        await this.close().catch(() => {});
+      }
+      throw err;
+    }
   }
 
   async close() {
-    await this.#client?.close().catch((err) =>
-      console.error("[mcp] client close", err),
-    );
-    await this.#transport?.close().catch((err) =>
-      console.error("[mcp] transport close", err),
-    );
+    await this.#client
+      ?.close()
+      .catch((err) => console.error("[mcp] client close", err));
+    await this.#transport
+      ?.close()
+      .catch((err) => console.error("[mcp] transport close", err));
     if (this.#configPath) {
       try {
         unlinkSync(this.#configPath);

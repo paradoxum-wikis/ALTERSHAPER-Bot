@@ -1,6 +1,6 @@
 import OpenAI from "openai";
 import type { ChatCompletionMessageParam } from "openai/resources/chat/completions";
-import { McpSession } from "./mcpSession.js";
+import { getMcpSession } from "./mcpSession.js";
 import { prepareToolArgs, toTools } from "./tools.js";
 import { systemPrompt, userPrompt } from "./prompt.js";
 import type { WikiConfig } from "./wikis.js";
@@ -60,7 +60,6 @@ export function formatContextUsage(
 }
 
 export async function runJob(input: JobInput): Promise<JobResult> {
-  const mcp = new McpSession();
   const started = Date.now();
   const model = requireEnv("LLM_MODEL");
   const thinking = input.thinking !== false;
@@ -77,115 +76,111 @@ export async function runJob(input: JobInput): Promise<JobResult> {
     contextLimit: CONTEXT_LIMIT,
   });
 
-  try {
-    await input.onProgress?.("Connecting to wiki tools...");
-    await mcp.connect();
-    const tools = toTools(await mcp.listTools());
-    if (!tools.length) throw new Error("No MCP tools available after filter");
+  await input.onProgress?.("Connecting to wiki tools...");
+  const mcp = await getMcpSession();
+  const tools = toTools(await mcp.listTools());
+  if (!tools.length) throw new Error("No MCP tools available after filter");
 
-    const who = await mcp.callTool("whoami", { wiki: input.wiki.mcpKey });
-    if (authFailed(who)) throw new Error(`Wiki login failed:\n${who}`);
+  const who = await mcp.callTool("whoami", { wiki: input.wiki.mcpKey });
+  if (authFailed(who)) throw new Error(`Wiki login failed:\n${who}`);
 
-    const client = new OpenAI({
-      apiKey: requireEnv("LLM_API_KEY"),
-      baseURL: requireEnv("LLM_BASE_URL"),
-    });
-    const messages: ChatCompletionMessageParam[] = [
-      {
-        role: "system",
-        content: systemPrompt(input.wiki, input.sessionPage, input.outputPage),
-      },
-      {
-        role: "user",
-        content: userPrompt(
-          input.task,
-          input.sessionPage,
-          input.outputPage,
-          input.jobId,
-          input.isContinue,
-        ),
-      },
-    ];
+  const client = new OpenAI({
+    apiKey: requireEnv("LLM_API_KEY"),
+    baseURL: requireEnv("LLM_BASE_URL"),
+  });
+  const messages: ChatCompletionMessageParam[] = [
+    {
+      role: "system",
+      content: systemPrompt(input.wiki, input.sessionPage, input.outputPage),
+    },
+    {
+      role: "user",
+      content: userPrompt(
+        input.task,
+        input.sessionPage,
+        input.outputPage,
+        input.jobId,
+        input.isContinue,
+      ),
+    },
+  ];
 
-    for (let step = 1; step <= MAX_STEPS; step++) {
-      if (Date.now() - started > TIMEOUT_MS) {
-        return result(
-          `Timed out after ${step - 1} steps. Session: \`${input.sessionPage}\`.`,
-          step - 1,
-        );
-      }
-
-      await input.onProgress?.(
-        `${thinking ? "Thinking" : "Working"} (step ${step}/${MAX_STEPS})…`,
+  for (let step = 1; step <= MAX_STEPS; step++) {
+    if (Date.now() - started > TIMEOUT_MS) {
+      return result(
+        `Timed out after ${step - 1} steps. Session: \`${input.sessionPage}\`.`,
+        step - 1,
       );
-
-      const res = await client.chat.completions.create({
-        model,
-        messages,
-        tools,
-        ...(thinking
-          ? {
-              reasoning_effort: "high" as const,
-              thinking: { type: "enabled" as const },
-            }
-          : { thinking: { type: "disabled" as const } }),
-      });
-
-      peakPromptTokens = Math.max(
-        peakPromptTokens,
-        res.usage?.prompt_tokens ?? 0,
-      );
-
-      const msg = res.choices[0]?.message;
-      if (!msg) throw new Error("Empty completion");
-
-      // tool turns 400 without reasoning_content when thinking was on
-      messages.push({
-        role: "assistant",
-        content: msg.content,
-        tool_calls: msg.tool_calls,
-        ...(thinking && msg.reasoning_content != null
-          ? { reasoning_content: msg.reasoning_content }
-          : {}),
-      });
-
-      if (!msg.tool_calls?.length) {
-        return result(
-          msg.content?.trim() || `Done. Session: \`${input.sessionPage}\`.`,
-          step,
-        );
-      }
-
-      for (const call of msg.tool_calls) {
-        if (call.type !== "function") continue;
-        const { name, arguments: rawArgs } = call.function;
-        await input.onProgress?.(`\`${name}\`...`);
-
-        const prepared = prepareToolArgs(name, rawArgs, input.wiki);
-        let content = prepared.ok
-          ? await mcp.callTool(name, prepared.args)
-          : prepared.error;
-        if (content.length > TOOL_RESULT_MAX) {
-          content = `${content.slice(0, TOOL_RESULT_MAX)}\n...[truncated ${content.length - TOOL_RESULT_MAX} chars]`;
-        }
-
-        console.log(`[job ${input.jobId}] ${input.wiki.choice} tool=${name}`);
-        if (authFailed(content))
-          throw new Error(`Wiki login failed:\n${content}`);
-
-        messages.push({
-          role: "tool",
-          tool_call_id: call.id,
-          content,
-        });
-      }
     }
 
-    return result(
-      `Hit max steps (${MAX_STEPS}). Session: \`${input.sessionPage}\`.`,
-      MAX_STEPS,
+    await input.onProgress?.(
+      `${thinking ? "Thinking" : "Working"} (step ${step}/${MAX_STEPS})…`,
     );
-  } finally {
-    await mcp.close();
+
+    const res = await client.chat.completions.create({
+      model,
+      messages,
+      tools,
+      ...(thinking
+        ? {
+            reasoning_effort: "high" as const,
+            thinking: { type: "enabled" as const },
+          }
+        : { thinking: { type: "disabled" as const } }),
+    });
+
+    peakPromptTokens = Math.max(
+      peakPromptTokens,
+      res.usage?.prompt_tokens ?? 0,
+    );
+
+    const msg = res.choices[0]?.message;
+    if (!msg) throw new Error("Empty completion");
+
+    // tool turns 400 without reasoning_content when thinking was on
+    messages.push({
+      role: "assistant",
+      content: msg.content,
+      tool_calls: msg.tool_calls,
+      ...(thinking && msg.reasoning_content != null
+        ? { reasoning_content: msg.reasoning_content }
+        : {}),
+    });
+
+    if (!msg.tool_calls?.length) {
+      return result(
+        msg.content?.trim() || `Done. Session: \`${input.sessionPage}\`.`,
+        step,
+      );
+    }
+
+    for (const call of msg.tool_calls) {
+      if (call.type !== "function") continue;
+      const { name, arguments: rawArgs } = call.function;
+      await input.onProgress?.(`\`${name}\`...`);
+
+      const prepared = prepareToolArgs(name, rawArgs, input.wiki);
+      let content = prepared.ok
+        ? await mcp.callTool(name, prepared.args)
+        : prepared.error;
+      if (content.length > TOOL_RESULT_MAX) {
+        content = `${content.slice(0, TOOL_RESULT_MAX)}\n...[truncated ${content.length - TOOL_RESULT_MAX} chars]`;
+      }
+
+      console.log(`[job ${input.jobId}] ${input.wiki.choice} tool=${name}`);
+      if (authFailed(content))
+        throw new Error(`Wiki login failed:\n${content}`);
+
+      messages.push({
+        role: "tool",
+        tool_call_id: call.id,
+        content,
+      });
+    }
   }
+
+  return result(
+    `Hit max steps (${MAX_STEPS}). Session: \`${input.sessionPage}\`.`,
+    MAX_STEPS,
+  );
 }
