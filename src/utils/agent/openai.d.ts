@@ -2,7 +2,7 @@ import "openai";
 
 declare module "openai/resources/chat/completions" {
   interface ChatCompletionCreateParamsBase {
-    thinking?: { type: "enabled" | "disabled" };
+    thinking?: { type: string };
   }
 
   interface ChatCompletionMessage {

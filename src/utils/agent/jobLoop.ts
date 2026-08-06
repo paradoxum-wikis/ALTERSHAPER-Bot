@@ -88,6 +88,18 @@ export async function runJob(input: JobInput): Promise<JobResult> {
     apiKey: requireEnv("LLM_API_KEY"),
     baseURL: requireEnv("LLM_BASE_URL"),
   });
+
+  const effort = process.env[
+    thinking ? "LLM_REASONING_EFFORT" : "LLM_REASONING_EFFORT_OFF"
+  ]?.trim();
+  const thinkingType = process.env[
+    thinking ? "LLM_THINKING_TYPE" : "LLM_THINKING_TYPE_OFF"
+  ]?.trim();
+  const extras = {
+    ...(effort ? { reasoning_effort: effort } : {}),
+    ...(thinkingType ? { thinking: { type: thinkingType } } : {}),
+  };
+
   const messages: ChatCompletionMessageParam[] = [
     {
       role: "system",
@@ -121,13 +133,8 @@ export async function runJob(input: JobInput): Promise<JobResult> {
       model,
       messages,
       tools,
-      ...(thinking
-        ? {
-            reasoning_effort: "high" as const,
-            thinking: { type: "enabled" as const },
-          }
-        : { thinking: { type: "disabled" as const } }),
-    });
+      ...extras,
+    } as OpenAI.Chat.ChatCompletionCreateParamsNonStreaming);
 
     peakPromptTokens = Math.max(
       peakPromptTokens,
@@ -137,12 +144,11 @@ export async function runJob(input: JobInput): Promise<JobResult> {
     const msg = res.choices[0]?.message;
     if (!msg) throw new Error("Empty completion");
 
-    // tool turns 400 without reasoning_content when thinking was on
     messages.push({
       role: "assistant",
       content: msg.content,
       tool_calls: msg.tool_calls,
-      ...(thinking && msg.reasoning_content != null
+      ...(msg.reasoning_content
         ? { reasoning_content: msg.reasoning_content }
         : {}),
     });
