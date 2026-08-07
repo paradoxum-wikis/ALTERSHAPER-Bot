@@ -277,7 +277,9 @@ async function runOneGame(
     memberB,
     undefined,
     false,
-    "deathbattle4.png",
+    series.conference === "exo" || (series.subgroup ?? 3) <= 2
+      ? "deathbattle4.png"
+      : "deathbattle.png",
   );
   const battleFile = new AttachmentBuilder(imageResult.buffer, {
     name: "deathbattle.png",
