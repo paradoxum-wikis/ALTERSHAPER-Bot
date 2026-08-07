@@ -111,6 +111,11 @@ const commands: CommandInfo[] = [
     category: "basic1",
   },
   {
+    name: "/tourney",
+    value: "Aphonos Playoffs...",
+    category: "basic1",
+  },
+  {
     name: "/russian @target",
     value: "Play a game of Russian Roulette with another user",
     category: "basic3",

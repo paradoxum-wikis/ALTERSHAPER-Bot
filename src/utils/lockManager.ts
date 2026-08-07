@@ -1,4 +1,4 @@
-export type GameType = "battle" | "russian";
+export type GameType = "battle" | "russian" | "tourney";
 
 interface GameLock {
   guildId: string;
@@ -10,7 +10,7 @@ interface GameLock {
 const activeLocks = new Map<string, Map<GameType, GameLock>>();
 
 export class LockManager {
-  private static readonly TIMEOUT = 1000 * 60 * 5; // 5 minutes
+  private static readonly TIMEOUT = 1000 * 60 * 5; // 5 minutes (not used for tourney)
 
   // Checks if a specific game type is active in a server
   public static isLocked(guildId: string, gameType: GameType): boolean {
@@ -38,6 +38,10 @@ export class LockManager {
     gameType: GameType,
     userIds: string[],
   ): boolean {
+    if (gameType === "battle" && this.isLocked(guildId, "tourney")) {
+      return false;
+    }
+
     // Check if this specific game type is already running in this guild
     if (this.isLocked(guildId, gameType)) {
       return false;
@@ -81,6 +85,7 @@ export class LockManager {
 
     for (const [guildId, guildLocks] of activeLocks.entries()) {
       for (const [gameType, lock] of guildLocks.entries()) {
+        if (gameType === "tourney") continue;
         if (now - lock.startTime > this.TIMEOUT) {
           console.log(
             `[LOCKMANAGER] Cleaning up timed out ${gameType} in guild ${guildId}`,

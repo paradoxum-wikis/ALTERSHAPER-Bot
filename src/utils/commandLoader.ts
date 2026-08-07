@@ -20,6 +20,8 @@ import * as trivia from "../commands/trivia.js";
 import * as aura from "../commands/aura.js";
 import * as battle from "../commands/battle.js";
 import * as battlestats from "../commands/battlestats.js";
+import * as tourney from "../commands/tourney.js";
+
 import * as furry from "../commands/furry.js";
 import * as anime from "../commands/anime.js";
 import * as ship from "../commands/ship.js";
@@ -63,6 +65,7 @@ export function loadCommands(): Collection<string, Command> {
     aura,
     battle,
     battlestats,
+    tourney,
     furry,
     anime,
     ship,

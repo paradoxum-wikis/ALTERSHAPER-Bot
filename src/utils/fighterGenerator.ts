@@ -10,7 +10,37 @@ export interface Fighter {
   speed: number;
   critChance: number;
   abilities: string[];
+  abilitiesDisabled?: boolean;
+  abilitySilenceTurns?: number;
 }
+
+export const ABILITY_POOL = [
+  "Alter Ego Burst",
+  "Ego Shield",
+  "Shadow Clone",
+  "Healing Light",
+  "Berserker Rage",
+  "Time Slow",
+  "Soul Strike",
+  "Phoenix Rising",
+  "Relic of Exo",
+  "Ego's Blessing",
+  "Cleansing",
+  "Raise the Dead",
+  "Warrior's Call",
+  "Drop the Beat",
+  "Call to Arms",
+  "Airstrike",
+  "Divine Intervention",
+  "Great Will",
+  "Toxic Fumes",
+  "Freikugel",
+  "Bloodlust",
+  "Blade of the Old World",
+  "Spectral Exonorator",
+  "Axis Cleave",
+  "Kim Ji Hoon Combo",
+] as const;
 
 export function hashString(str: string): number {
   let hash = 0;
@@ -79,42 +109,14 @@ export function generateFighter(
   const baseSpeed = Math.floor(10 + auraMultiplier * 10); // 10-20 SPD
   const critChance = 0.1 + auraMultiplier * 0.2; // 0.1-0.3 crit chance
 
-  const abilities = [
-    "Alter Ego Burst",
-    "Ego Shield",
-    "Shadow Clone",
-    "Healing Light",
-    "Berserker Rage",
-    "Time Slow",
-    "Soul Strike",
-    "Phoenix Rising",
-    "Relic of Exo",
-    "Ego's Blessing",
-    "Cleansing",
-    "Raise the Dead",
-    "Warrior's Call",
-    "Drop the Beat",
-    "Call to Arms",
-    "Airstrike",
-    "Divine Intervention",
-    "Great Will",
-    "Toxic Fumes",
-    "Freikugel",
-    "Bloodlust",
-    "Blade of the Old World",
-    "Spectral Exonorator",
-    "Axis Cleave",
-    "Kim Ji Hoon Combo",
-  ];
-
   let seed = hashString(displayName) + 1000;
   const random = () => {
     seed = (seed * 9301 + 49297) % 233280;
     return seed / 233280;
   };
 
-  const selectedAbilities = [];
-  const abilityPool = [...abilities];
+  const selectedAbilities: string[] = [];
+  const abilityPool = [...ABILITY_POOL];
   for (let i = 0; i < 2; i++) {
     const index = Math.floor(random() * abilityPool.length);
     selectedAbilities.push(abilityPool.splice(index, 1)[0]);

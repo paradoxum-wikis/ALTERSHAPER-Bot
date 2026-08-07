@@ -10,6 +10,7 @@ import {
   Collection,
 } from "discord.js";
 import { loadCommands, Command } from "./utils/commandLoader.js";
+import { hydrateActiveTourneys } from "./utils/tourney/lifecycle.js";
 import { ReactionRoleHandler } from "./utils/reactionRoleHandler.js";
 import { ConsoleHandler } from "./utils/consoleHandler.js";
 import { registerConsoleCommands } from "./utils/consoleCommands.js";
@@ -59,6 +60,15 @@ class AltershaperBot {
       await this.registerSlashCommands();
       await ReactionRoleHandler.initialize(this.client);
       InterServerChat.initialize(this.client);
+
+      try {
+        const n = await hydrateActiveTourneys();
+        if (n > 0) {
+          console.log(`[tourney] Restored ${n} active tourney(s) from disk`);
+        }
+      } catch (e) {
+        console.error("[tourney] Failed to hydrate active tourneys:", e);
+      }
 
       this.resolveReady();
     });
