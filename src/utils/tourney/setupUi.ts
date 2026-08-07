@@ -464,7 +464,15 @@ async function runRefPickLoop(
       continue;
     }
 
-    await sgBtn.update(arcanaStagePayload(state, current, sg));
+    try {
+      await sgBtn.update(arcanaStagePayload(state, current, sg));
+    } catch (e) {
+      await sgBtn.reply({
+        content: e instanceof Error ? e.message : "Failed.",
+        flags: MessageFlags.Ephemeral,
+      });
+      continue;
+    }
 
     let committed = false;
     while (!committed) {

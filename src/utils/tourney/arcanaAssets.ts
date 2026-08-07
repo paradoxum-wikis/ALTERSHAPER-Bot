@@ -1,8 +1,15 @@
 import fs from "fs";
 import path from "path";
+import { fileURLToPath } from "url";
 import { AttachmentBuilder, EmbedBuilder } from "discord.js";
 import type { RefereeArcanaId } from "./types.js";
 import { COLOR } from "./ui.js";
+
+const ASSET_DIR = path.join(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "..",
+  "..",
+);
 
 export type ArcanaArtId =
   RefereeArcanaId | "star" | "justice" | "judgement" | "world";
@@ -50,11 +57,9 @@ export function arcanaFilename(id: ArcanaArtId): string {
 
 function resolvePath(id: ArcanaArtId): string {
   const name = arcanaFilename(id);
-  for (const dir of ["src", "dist"]) {
-    const p = path.join(process.cwd(), dir, name);
-    if (fs.existsSync(p)) return p;
-  }
-  throw new Error(`Missing ${name}`);
+  const p = path.join(ASSET_DIR, name);
+  if (!fs.existsSync(p)) throw new Error(`Missing ${name}`);
+  return p;
 }
 
 export function arcanaAttachment(id: ArcanaArtId): AttachmentBuilder {
