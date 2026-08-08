@@ -43,6 +43,10 @@ const WIKIS = {
   }
 >;
 
+export const WIKI_MCP_KEYS: readonly string[] = Object.values(WIKIS).map(
+  (w) => w.mcpKey,
+);
+
 export const DOC_MCP_KEYS = [
   "community.fandom.com",
   "www.mediawiki.org",

@@ -1,7 +1,7 @@
 import type { ChatCompletionTool } from "openai/resources/chat/completions";
 import type { FunctionParameters } from "openai/resources/shared";
 import type { WikiConfig } from "./wikis.js";
-import { DOC_MCP_KEYS, isWritablePage } from "./wikis.js";
+import { DOC_MCP_KEYS, isWritablePage, WIKI_MCP_KEYS } from "./wikis.js";
 
 const ALLOWED = new Set([
   "get-page",
@@ -72,12 +72,12 @@ export function prepareToolArgs(
       ? String(args.wiki).replace(/^mcp:\/\/wikis\//, "").replace(/\/$/, "")
       : wiki.mcpKey;
   if (
-    raw !== wiki.mcpKey &&
+    !WIKI_MCP_KEYS.includes(raw) &&
     !(DOC_MCP_KEYS as readonly string[]).includes(raw)
   ) {
     return {
       ok: false,
-      error: `wiki must be ${wiki.mcpKey} or docs (${DOC_MCP_KEYS.join(", ")}); got ${raw}`,
+      error: `wiki must be one of ${WIKI_MCP_KEYS.join(", ")} or docs (${DOC_MCP_KEYS.join(", ")}); got ${raw}`,
     };
   }
   args.wiki = raw;
